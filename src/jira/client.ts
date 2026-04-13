@@ -7,14 +7,25 @@ import axios, { AxiosInstance } from "axios";
 // → Giữ 1 instance axios duy nhất, tái dùng
 //   connection pool, header không cần set lại
 // ─────────────────────────────────────────────
+
+/**
+ * Config cho JiraClient factory.
+ * Dùng khi cần tạo client với credentials khác env vars.
+ */
+export interface JiraClientConfig {
+  baseUrl: string;
+  pat: string;
+}
+
 export class JiraClient {
   private http: AxiosInstance;
+  private baseUrl: string;
 
-  constructor() {
-    const baseURL = process.env.JIRA_BASE_URL;
-    const pat = process.env.JIRA_PAT;
+  constructor(config?: JiraClientConfig) {
+    const baseUrl = config?.baseUrl || process.env.JIRA_BASE_URL;
+    const pat = config?.pat || process.env.JIRA_PAT;
 
-    if (!baseURL || !pat) {
+    if (!baseUrl || !pat) {
       throw new Error(
         "Thiếu biến môi trường: JIRA_BASE_URL hoặc JIRA_PAT\n\n" +
         "Cách 1 (Khuyên dùng): Thêm block \"env\" vào cấu hình MCP Client:\n" +
@@ -27,10 +38,12 @@ export class JiraClient {
       );
     }
 
+    this.baseUrl = baseUrl;
+
     // Jira Server/DC dùng PAT qua header Bearer
     // Khác Jira Cloud dùng Basic Auth (email:api_token)
     this.http = axios.create({
-      baseURL: `${baseURL}/rest/api/2`,
+      baseURL: `${baseUrl}/rest/api/2`,
       headers: {
         Authorization: `Bearer ${pat}`,
         "Content-Type": "application/json",
@@ -66,18 +79,18 @@ export class JiraClient {
     );
   }
 
+  /** Getter cho baseUrl — dùng trong tools để tạo link */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   /**
    * Cập nhật PAT tại runtime — tạo lại axios instance
    * với Bearer token mới mà không cần restart server
    */
   updatePat(newPat: string) {
-    const baseURL = process.env.JIRA_BASE_URL;
-    if (!baseURL) {
-      throw new Error("Thiếu biến môi trường: JIRA_BASE_URL");
-    }
-
     this.http = axios.create({
-      baseURL: `${baseURL}/rest/api/2`,
+      baseURL: `${this.baseUrl}/rest/api/2`,
       headers: {
         Authorization: `Bearer ${newPat}`,
         "Content-Type": "application/json",
@@ -249,11 +262,10 @@ export class JiraClient {
    * Response là JSON array với editHtml escaped — parse bằng regex
    */
   async getCreateMeta(_projectKey: string, _issueTypeName: string) {
-    const baseURL = process.env.JIRA_BASE_URL;
     const res = await this.http.get(
       "/secure/QuickCreateIssue!default.jspa?decorator=none",
       {
-        baseURL,
+        baseURL: this.baseUrl,
         timeout: 30000,
         responseType: "text",
       }
@@ -729,5 +741,36 @@ export class JiraClient {
 }
 
 
-// Singleton instance — toàn bộ app dùng chung 1 client
-export const jiraClient = new JiraClient();
+/**
+ * Factory function — tạo JiraClient instance với credentials tùy chỉnh.
+ * Dùng cho HTTP transport với per-request credentials từ headers.
+ */
+export function createJiraClient(config: JiraClientConfig): JiraClient {
+  return new JiraClient(config);
+}
+
+// Singleton instance — dùng cho stdio transport (credentials từ env vars)
+// HTTP transport dùng per-request client qua createJiraClient()
+//
+// Lazy init via Proxy: chỉ khởi tạo khi method được gọi lần đầu
+// Cho phép HTTP-only mode chạy mà không cần JIRA_* env vars
+let _jiraClientInstance: JiraClient | null = null;
+
+function getJiraClientInstance(): JiraClient {
+  if (!_jiraClientInstance) {
+    _jiraClientInstance = new JiraClient();
+  }
+  return _jiraClientInstance;
+}
+
+export const jiraClient: JiraClient = new Proxy({} as JiraClient, {
+  get(_target, prop, receiver) {
+    const instance = getJiraClientInstance();
+    const value = Reflect.get(instance, prop, receiver);
+    // Bind methods to instance
+    if (typeof value === "function") {
+      return value.bind(instance);
+    }
+    return value;
+  },
+});

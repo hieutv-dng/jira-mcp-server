@@ -1,4 +1,14 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+// Load .env từ thư mục gốc project (không phụ thuộc CWD)
+// Fix cho trường hợp supergateway spawn child process với CWD khác
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = resolve(__dirname, "..");
+config({ path: resolve(projectRoot, ".env") });
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerJiraTools } from "./jira/tools.js";
 import { startStdioTransport } from "./transports/stdio-transport.js";

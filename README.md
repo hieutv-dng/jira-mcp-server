@@ -45,6 +45,44 @@ npm run build                                    # Stdio transport
 HTTP_PORT=3000 MCP_AUTH_TOKEN=secret npm start   # HTTP transport
 ```
 
+### Share cho Team (không cần .env file)
+
+Mỗi thành viên tự config trực tiếp trong MCP client của mình:
+
+**Claude Desktop** (`~/.claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "jira-mcp-server": {
+      "command": "node",
+      "args": ["/path/to/jira-mcp-server/dist/index.js"],
+      "env": {
+        "JIRA_BASE_URL": "https://jira.company.com",
+        "JIRA_PAT": "your-personal-pat-token"
+      }
+    }
+  }
+}
+```
+
+**Cursor/Windsurf** (`.cursor/mcp.json` hoặc `.windsurf/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "jira-mcp-server": {
+      "command": "node",
+      "args": ["/path/to/jira-mcp-server/dist/index.js"],
+      "env": {
+        "JIRA_BASE_URL": "https://jira.company.com",
+        "JIRA_PAT": "your-personal-pat-token"
+      }
+    }
+  }
+}
+```
+
+> **Lưu ý:** File `.env.local` chỉ cần khi dev local (`npm run dev`). Production dùng `env` block trong MCP config.
+
 ### Kết nối Clients
 
 - **Claude Desktop:** Xem [claude-desktop-setup.md](docs/claude-desktop-setup.md)
@@ -134,6 +172,59 @@ src/
 │   └── http-transport.ts # Express + Bearer auth
 └── shared/utils.ts       # Error handling, chaining
 ```
+
+---
+
+## Multi-Tenant Deployment
+
+Cho phép nhiều users dùng chung một MCP server, mỗi user có credentials Jira riêng.
+
+### Architecture
+
+```
+Client (headers) → Nginx (:443 SSL) → Node.js (:3000) → Jira API
+```
+
+### Client Config
+
+Thêm `X-Jira-*` headers vào MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "jira": {
+      "type": "streamableHttp",
+      "url": "https://mcp.company.com/mcp",
+      "headers": {
+        "Authorization": "Bearer <MCP_AUTH_TOKEN>",
+        "X-Jira-Base-Url": "https://jira.company.com",
+        "X-Jira-Pat": "<your-personal-token>"
+      }
+    }
+  }
+}
+```
+
+### Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer token (`MCP_AUTH_TOKEN` trên server) |
+| `X-Jira-Base-Url` | No* | Jira server URL |
+| `X-Jira-Pat` | No* | Personal Access Token |
+
+*Fallback to server env vars nếu không truyền headers.
+
+### Server Setup
+
+1. **Chạy MCP server:**
+```bash
+HTTP_PORT=3000 MCP_AUTH_TOKEN=<secret> npm start
+```
+
+2. **Cấu hình Nginx:** Copy `deploy/nginx.conf.example` và sửa domain.
+
+3. **SSL:** `certbot --nginx -d mcp.company.com`
 
 ---
 

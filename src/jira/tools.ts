@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { jiraClient } from "./client.js";
+import { jiraClient, JiraClient } from "./client.js";
 import { formatIssueForAI, formatIssueListForAI } from "./formatter.js";
 import { withErrorHandler, getChainHint } from "../shared/index.js";
 import { getCurrentPat, updatePat, validatePat } from "./pat-manager.js";
@@ -39,7 +39,14 @@ function buildUserClause(role: string, assigneeFilter: string): string {
   return `${jqlField} = ${userValue} AND `;
 }
 
-export function registerJiraTools(server: McpServer) {
+/**
+ * Register all Jira tools on the MCP server.
+ * @param server - MCP server instance
+ * @param client - Optional JiraClient, defaults to singleton for stdio transport
+ */
+export function registerJiraTools(server: McpServer, client?: JiraClient) {
+  // Use injected client or fallback to singleton (stdio mode)
+  const jira = client || jiraClient;
 
   // ── TOOL 1: Lấy danh sách issues ─────────────
   server.tool(
@@ -114,7 +121,7 @@ export function registerJiraTools(server: McpServer) {
         jql = `${projectFilter}${userClause}${statusMap[statusFilter]} ORDER BY priority DESC, updated DESC`;
       }
 
-      const data = await jiraClient.searchIssues(jql, maxResults);
+      const data = await jira.searchIssues(jql, maxResults);
 
       // Build label mô tả filter đang dùng
       const statusLabelMap: Record<string, string> = {
@@ -160,7 +167,7 @@ export function registerJiraTools(server: McpServer) {
         .describe("Jira issue key, VD: 'PROJAI-123'"),
     },
     withErrorHandler("get_issue_detail", async ({ issueKey }) => {
-      const issue = await jiraClient.getIssue(issueKey);
+      const issue = await jira.getIssue(issueKey);
  
       // ── Tự động check drift ────────────────────
       // Không cần gọi tool riêng — warning xuất hiện
@@ -200,7 +207,7 @@ export function registerJiraTools(server: McpServer) {
         .describe("Ngày bắt đầu làm việc, format YYYY-MM-DD (VD: '2026-03-02'). BẮT BUỘC phải truyền."),
     },
     withErrorHandler("log_work", async ({ issueKey, timeSpent, comment, startedAt }) => {
-      const result = await jiraClient.addWorklog(issueKey, timeSpent, comment, startedAt);
+      const result = await jira.addWorklog(issueKey, timeSpent, comment, startedAt);
       return {
         content: [{
           type: "text",
@@ -237,7 +244,7 @@ export function registerJiraTools(server: McpServer) {
     withErrorHandler("update_issue", async ({ issueKey, dryRun, transitionName, comment, resolution }) => {
       // Case 1: dryRun — chỉ list transitions
       if (dryRun) {
-        const transitions = await jiraClient.getTransitions(issueKey);
+        const transitions = await jira.getTransitions(issueKey);
         const list = transitions.map((t) => `  • ${t.name} (id: ${t.id})`).join("\n");
         return {
           content: [{
@@ -249,7 +256,7 @@ export function registerJiraTools(server: McpServer) {
 
       // Case 2: chỉ comment (không transition)
       if (!transitionName && comment) {
-        await jiraClient.addComment(issueKey, comment);
+        await jira.addComment(issueKey, comment);
         return {
           content: [{
             type: "text",
@@ -270,7 +277,7 @@ export function registerJiraTools(server: McpServer) {
 
       // Case 4: transition (± comment, ± resolution)
       // transitionIssue() gọi getTransitions() internally — không cần gọi trước
-      await jiraClient.transitionIssue(issueKey, transitionName!, { resolution, comment });
+      await jira.transitionIssue(issueKey, transitionName!, { resolution, comment });
 
       const lines = [
         `✅ Đã cập nhật thành công!`,
@@ -365,7 +372,7 @@ export function registerJiraTools(server: McpServer) {
 
         // 1. Custom fields (SPDA, Công đoạn, issuetype, priority)
         try {
-          const meta = await jiraClient.getCreateMeta(payload.projectKey, payload.issueType);
+          const meta = await jira.getCreateMeta(payload.projectKey, payload.issueType);
           for (const [fieldId, field] of Object.entries(meta.fields)) {
             if (field.allowedValues && field.allowedValues.length > 0) {
               lines.push(`### ${field.name} (${fieldId})`);
@@ -381,13 +388,13 @@ export function registerJiraTools(server: McpServer) {
         } catch {
           lines.push(`⚠️ API createmeta không khả dụng — đọc từ issue gần nhất`, "");
           try {
-            const searchData = await jiraClient.searchIssues(
+            const searchData = await jira.searchIssues(
               `project = ${payload.projectKey} ORDER BY created DESC`,
               1
             );
             const latestIssue = searchData.issues?.[0];
             if (latestIssue) {
-              const cfData = await jiraClient.getCustomFieldFromIssue(
+              const cfData = await jira.getCustomFieldFromIssue(
                 latestIssue.key,
                 ["customfield_10100", "customfield_10101"]
               );
@@ -409,7 +416,7 @@ export function registerJiraTools(server: McpServer) {
 
         // 2. Assignable users
         try {
-          const users = await jiraClient.getAssignableUsers(payload.projectKey);
+          const users = await jira.getAssignableUsers(payload.projectKey);
           if (users.length > 0) {
             lines.push(`### Assignable Users`);
             lines.push(`Tổng: ${users.length} thành viên`);
@@ -425,7 +432,7 @@ export function registerJiraTools(server: McpServer) {
 
         // 3. Epics đang mở
         try {
-          const epics = await jiraClient.searchEpics(payload.projectKey);
+          const epics = await jira.searchEpics(payload.projectKey);
           if (epics.length > 0) {
             lines.push(`### Epics đang mở`);
             lines.push(`Tổng: ${epics.length} epic`);
@@ -455,7 +462,7 @@ export function registerJiraTools(server: McpServer) {
         };
       }
 
-      const result = await jiraClient.createIssue({
+      const result = await jira.createIssue({
         projectKey: payload.projectKey,
         summary: payload.summary,
         description: payload.description,
@@ -474,7 +481,7 @@ export function registerJiraTools(server: McpServer) {
           type: "text",
           text: `✅ Đã tạo issue thành công!\n` +
                 `🔑 Key: ${result.key}\n` +
-                `🔗 Link: ${process.env.JIRA_BASE_URL}/browse/${result.key}` + getChainHint("create_issue"),
+                `🔗 Link: ${jira.getBaseUrl()}/browse/${result.key}` + getChainHint("create_issue"),
         }],
       };
     })
