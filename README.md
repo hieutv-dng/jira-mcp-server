@@ -108,7 +108,7 @@ Claude will call `list_issues` tool. You'll see formatted issue list.
 - `assigneeFilter` (optional, string): User để filter. Default: `currentUser()` (tôi). Khác: `unassigned`, `any`, username cụ thể
 - `roleFilter` (optional, string): Role của user. Default: `assignee`. Khác: `reporter`, `watcher`
 - `statusFilter` (optional, string): Nhóm trạng thái. Default: `open`. Khác: `active`, `done`, `all`
-- `customJql` (optional, string): JQL tùy chỉnh — full override. VD: `project = VNPTAI AND sprint in openSprints()`
+- `customJql` (optional, string): JQL tùy chỉnh — full override. VD: `project = PROJ_XXX AND sprint in openSprints()`
 - `maxResults` (optional, number): Số lượng tối đa. Default: 20, Max: 50
 
 **Output:** Markdown table with priority, key, summary, status
@@ -175,12 +175,11 @@ User cannot login with SSO...
 
 ### 3. log_work
 
-**Description:** Ghi nhận giờ làm việc
+**Description:** Ghi nhận giờ làm việc (logwork tại thời điểm hiện tại)
 **Input:**
-- `key` (required, string): Issue key
-- `hours` (required, number): Hours worked (0 < hours ≤ 24)
-- `date` (optional, string): ISO date (default: today)
-- `comment` (optional, string): Worklog comment
+- `issueKey` (required, string): Issue key (e.g., "PROJ-123")
+- `timeSpent` (required, string): Thời gian theo format Jira: '2h', '30m', '1h 30m', '1d'. 1d = 8h.
+- `comment` (required, string): Mô tả ngắn gọn đã làm gì
 
 **Safety:** Requires user confirmation before executing
 
@@ -189,13 +188,17 @@ User cannot login with SSO...
 **Example:**
 
 ```
-User: "Log 4 hours on XYZ-123, testing the fix"
-Claude calls: log_work({ key: "XYZ-123", hours: 4, comment: "Testing the fix" })
+User: "Log 4 tiếng cho XYZ-123, đã fix bug login"
+Claude calls: log_work({ issueKey: "XYZ-123", timeSpent: "4h", comment: "Fix bug login" })
 
 [MCP asks for confirmation]
 User confirms
 
-Response: "✅ Logged 4 hours on XYZ-123 (worklog ID: 123456)"
+Response: "✅ Đã logwork thành công!
+📌 Issue: XYZ-123
+⏱️  Thời gian: 4h
+📝 Ghi chú: Fix bug login
+🆔 Worklog ID: 123456"
 ```
 
 **Next Step Suggestion:** `log_work` or `update_issue`
@@ -207,7 +210,7 @@ Response: "✅ Logged 4 hours on XYZ-123 (worklog ID: 123456)"
 **Description:** Cập nhật Jira issue: chuyển trạng thái, thêm comment, hoặc xem transitions khả dụng.
 
 **Input:**
-- `issueKey` (required, string): Issue key (e.g., "VNPTAI-123")
+- `issueKey` (required, string): Issue key (e.g., "PROJ_XXX-123")
 - `dryRun` (optional, boolean): true = chỉ xem transitions khả dụng, không thay đổi gì. Default: false
 - `transitionName` (optional, string): Tên trạng thái muốn chuyển (e.g., "In Progress", "Done"). Bỏ trống nếu chỉ muốn comment
 - `resolution` (optional, string): Resolution khi đóng task (e.g., "Done", "Fixed"). Chỉ cần khi chuyển sang Done/Resolved
@@ -270,7 +273,7 @@ Response: "✅ Đã cập nhật thành công!\n📌 Issue: XYZ-123\n🔄 Trạn
 **Description:** Tạo một Jira issue mới (Task, Sub-task, Bug, Story). Dùng dryRun=true để xem metadata (custom fields, users, epics) — không tạo issue.
 
 **Input:**
-- `projectKey` (required, string): Project key (e.g., "VNPTAI")
+- `projectKey` (required, string): Project key (e.g., "PROJ_XXX")
 - `dryRun` (optional, boolean): true = xem metadata, không tạo issue. Default: false
 - `issueType` (optional, string): Loại issue. Default: "Task". Khác: "Sub-task", "Bug", "Story"
 - `summary` (optional, string): Tiêu đề ngắn gọn (bắt buộc khi tạo)
@@ -294,16 +297,16 @@ Response: "✅ Đã cập nhật thành công!\n📌 Issue: XYZ-123\n🔄 Trạn
 
 1. **View metadata before creating (dryRun):**
 ```
-User: "Show me the metadata for GOCONNECT project"
-Claude calls: create_issue({ projectKey: "GOCONNECT", dryRun: true, issueType: "Task" })
+User: "Show me the metadata for PROJ_XXX project"
+Claude calls: create_issue({ projectKey: "PROJ_XXX", dryRun: true, issueType: "Task" })
 
 Response:
-📋 Create Meta — GOCONNECT / Task
+📋 Create Meta — PROJ_XXX / Task
 ### SPDA (customfield_10100)
 Required: ✅
 Options:
-  • id: 10 → "VNPT GoConnect"
-  • id: 20 → "VNPT AI Platform"
+  • id: 10 → "PROJECT XXXXX"
+  • id: 20 → "PROJECT YYYYY"
 
 ### Assignable Users
 Tổng: 5 thành viên
@@ -311,20 +314,20 @@ Tổng: 5 thành viên
   ...
 
 ### Epics đang mở
-  • GOCONNECT-100 → "Platform Architecture" [In Progress]
+  • PROJ_XXX-100 → "Platform Architecture" [In Progress]
 ```
 
 2. **Create new issue:**
 ```
-User: "Create a task in GOCONNECT project: Implement OAuth integration, description: Add OAuth2 support for SSO, priority: High"
+User: "Create a task in PROJ_XXX project: Implement OAuth integration, description: Add OAuth2 support for SSO, priority: High"
 Claude calls: create_issue({
-  projectKey: "GOCONNECT",
+  projectKey: "PROJ_XXX",
   issueType: "Task",
   summary: "Implement OAuth integration",
   description: "Add OAuth2 support for SSO",
   priority: "High",
   labels: ["backend", "feature"],
-  spda: "VNPT GoConnect",
+  spda: "Project SPDA",
   congDoan: "Development",
   dueDate: "2026-04-15",
   assignee: "nghiath"
@@ -333,7 +336,7 @@ Claude calls: create_issue({
 [MCP asks for confirmation]
 User confirms
 
-Response: "✅ Đã tạo issue thành công!\n🔑 Key: GOCONNECT-456\n🔗 Link: https://jira.company.com/browse/GOCONNECT-456"
+Response: "✅ Đã tạo issue thành công!\n🔑 Key: PROJ_XXX-456\n🔗 Link: https://jira.company.com/browse/PROJ_XXX-456"
 ```
 
 **Next Step Suggestion:** `log_work` or `update_issue`
