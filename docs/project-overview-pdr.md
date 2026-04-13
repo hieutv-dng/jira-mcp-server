@@ -1,8 +1,8 @@
-# mcp-jira-tools: Project Overview & PDR
+# jira-mcp-server: Project Overview & PDR
 
 ## Project Summary
 
-**mcp-jira-tools** là MCP (Model Context Protocol) server cung cấp công cụ Jira cho Claude AI assistants. Cho phép Claude tương tác trực tiếp với Jira Server/Data Center để quản lý issues, log work, comment, và transition issues.
+**jira-mcp-server** là MCP (Model Context Protocol) server cung cấp công cụ Jira cho Claude AI assistants. Cho phép Claude tương tác trực tiếp với Jira Server/Data Center để quản lý issues, log work, comment, và transition issues.
 
 **Version:** v1.0.0
 **Status:** Production-ready
@@ -33,7 +33,7 @@
 ```
 Claude Desktop / Claude Code
         ↓ (MCP protocol via stdio)
-mcp-jira-tools Server (Node.js/TypeScript)
+jira-mcp-server Server (Node.js/TypeScript)
         ├── 6 Tools: list_issues, get_issue_detail, log_work, update_issue, create_issue, manage_jira_pat
         ├── JiraClient: Jira REST API v2 (axios + PAT auth) + fuzzy matching
         ├── PATManager: PAT runtime updates (no restart needed)

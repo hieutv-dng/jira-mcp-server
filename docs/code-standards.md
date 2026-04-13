@@ -1,8 +1,8 @@
-# mcp-jira-tools: Code Standards & Conventions
+# jira-mcp-server: Code Standards & Conventions
 
 ## Overview
 
-Tài liệu này định nghĩa coding conventions, patterns, naming standards áp dụng cho mcp-jira-tools project.
+Tài liệu này định nghĩa coding conventions, patterns, naming standards áp dụng cho jira-mcp-server project.
 
 **Language:** TypeScript (ES2022)
 **Module System:** ES modules (NodeNext)

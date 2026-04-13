@@ -1,4 +1,4 @@
-# mcp-jira-tools
+# jira-mcp-server
 
 MCP (Model Context Protocol) server tích hợp Jira cho Claude AI. Hỗ trợ Claude Desktop, Claude Code và Claude.ai tương tác trực tiếp với Jira Server/Data Center.
 
@@ -36,7 +36,7 @@ Trong Jira Server/Data Center:
 
 ```bash
 git clone <repo-url>
-cd mcp-jira-tools
+cd jira-mcp-server
 npm install
 ```
 
@@ -75,7 +75,7 @@ Sửa config Claude Desktop (`~/Library/Application Support/Claude/claude_deskto
   "mcpServers": {
     "jira": {
       "command": "node",
-      "args": ["/path/to/mcp-jira-tools/dist/index.js"],
+      "args": ["/path/to/jira-mcp-server/dist/index.js"],
       "env": {
         "JIRA_BASE_URL": "https://jira.company.com",
         "JIRA_PAT": "your-pat-token"

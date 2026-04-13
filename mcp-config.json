@@ -1,6 +1,6 @@
 {
   "server": {
-    "name": "mcp-jira-tools",
+    "name": "jira-mcp-server",
     "version": "1.0.0"
   },
   "safety": {

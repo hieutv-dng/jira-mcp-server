@@ -1,8 +1,8 @@
-# mcp-jira-tools: Codebase Summary
+# jira-mcp-server: Codebase Summary
 
 ## Overview
 
-mcp-jira-tools là Node.js/TypeScript project (~1856 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 7 file chính: entry point, Jira client, tool definitions, formatter, PAT manager, utilities.
+jira-mcp-server là Node.js/TypeScript project (~1856 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 7 file chính: entry point, Jira client, tool definitions, formatter, PAT manager, utilities.
 
 **Total LOC:** ~1856
 **Files:** 7 source files + 2 config files
@@ -39,7 +39,7 @@ Config:
 ```typescript
 // Pseudocode
 const server = new McpServer({
-  name: "mcp-jira-tools",
+  name: "jira-mcp-server",
   version: "1.0.0"
 });
 
@@ -328,7 +328,7 @@ MCP SDK reads này để prompt user confirmation trước execute. Note: `updat
 ### **package.json**
 ```json
 {
-  "name": "mcp-jira-tools",
+  "name": "jira-mcp-server",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -496,7 +496,7 @@ npm start  # Runs node dist/index.js
 
 **start-ngrok-remote.sh handles:**
 - Pulls supergateway v3.4.3 Docker image
-- Runs mcp-jira-tools in container
+- Runs jira-mcp-server in container
 - Bridges stdio → Streamable HTTP (supergateway)
 - Creates ngrok tunnel for remote access
 - Health checks, process monitoring, graceful shutdown

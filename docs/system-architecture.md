@@ -1,4 +1,4 @@
-# mcp-jira-tools: System Architecture
+# jira-mcp-server: System Architecture
 
 ## High-Level Architecture
 
@@ -9,7 +9,7 @@
                       │ stdio (MCP Protocol v3)
                       ↓
 ┌─────────────────────────────────────────────────────┐
-│ mcp-jira-tools Server (Node.js/TypeScript)          │
+│ jira-mcp-server Server (Node.js/TypeScript)          │
 ├─────────────────────────────────────────────────────┤
 │ ┌─────────────────┐  ┌──────────────────────────┐   │
 │ │ MCP Server      │  │ Tool Handlers (6 tools)  │   │
@@ -439,7 +439,7 @@ Tool Response
 ┌────────────────────────┐
 │ Local Machine          │
 ├────────────────────────┤
-│ mcp-jira-tools Server  │
+│ jira-mcp-server Server  │
 │ (stdio transport)      │
 └────────┬───────────────┘
          │
@@ -470,7 +470,7 @@ Tool Response
 
 **Script: start-ngrok-remote.sh**
 - Pulls supergateway Docker image
-- Runs mcp-jira-tools in container with PAT env var
+- Runs jira-mcp-server in container with PAT env var
 - Bridges stdio to HTTP
 - Creates ngrok tunnel (public URL)
 - Health checks (port 5000)
@@ -584,7 +584,7 @@ MCP Server ←────────┤─ Request 2 (stdin)
 
 **If Scaling Needed (Future):**
 - Load balancer (nginx)
-- Multiple mcp-jira-tools instances
+- Multiple jira-mcp-server instances
 - Connection pooling (axios defaults)
 - Cache layer (Redis) for frequently accessed issues
 - Rate limiting (per user or API key)
@@ -593,7 +593,7 @@ MCP Server ←────────┤─ Request 2 (stdin)
 ## Dependencies & External Services
 
 ```
-mcp-jira-tools
+jira-mcp-server
 ├── Internal Dependencies
 │   ├── src/jira/client.ts (JiraClient)
 │   ├── src/jira/tools.ts (Tool Handlers)
@@ -622,7 +622,7 @@ mcp-jira-tools
 ```
 Claude Desktop
     ↓ (stdio MCP config)
-mcp-jira-tools (npm start)
+jira-mcp-server (npm start)
     ↓ (HTTPS)
 Jira Server/Data Center
 ```
@@ -631,7 +631,7 @@ Jira Server/Data Center
 ```
 Claude Code
     ↓ (stdio MCP config)
-mcp-jira-tools (npm start)
+jira-mcp-server (npm start)
     ↓ (HTTPS)
 Jira Server/Data Center
 ```
@@ -642,9 +642,9 @@ Claude Desktop / Code
     ↓ (HTTPS)
 ngrok tunnel
     ↓ (HTTPS)
-supergateway (Docker) + mcp-jira-tools
+supergateway (Docker) + jira-mcp-server
     ↓ (HTTPS)
 Jira Server/Data Center
 ```
 
-**All variants:** Same mcp-jira-tools code, only transport differs.
+**All variants:** Same jira-mcp-server code, only transport differs.

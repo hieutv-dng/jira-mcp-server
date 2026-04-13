@@ -7,7 +7,7 @@ import { registerJiraTools } from "./jira/tools.js";
 // Khởi tạo MCP Server — Jira Tools Only
 // ─────────────────────────────────────────────
 const server = new McpServer({
-  name: "mcp-jira-tools",
+  name: "jira-mcp-server",
   version: "1.0.0",
 });
 

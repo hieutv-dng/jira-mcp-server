@@ -1,5 +1,5 @@
 {
-  "name": "mcp-jira-tools",
+  "name": "jira-mcp-server",
   "version": "1.0.0",
   "description": "MCP Server — Jira Tools (list, read, logwork, transition, comment, create)",
   "type": "module",

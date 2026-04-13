@@ -196,7 +196,7 @@ export function registerJiraTools(server: McpServer) {
         .describe("Mô tả ngắn gọn đã làm gì trong khoảng thời gian này"),
     },
     withErrorHandler("log_work", async ({ issueKey, timeSpent, comment }) => {
-      const result = await jiraClient.addWorklog(issueKey, timeSpent, comment);
+      const result = await jiraClient.addWorklog(issueKey, timeSpent, comment, new Date().toISOString());
       return {
         content: [{
           type: "text",
