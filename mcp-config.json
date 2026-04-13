@@ -1,0 +1,13 @@
+{
+  "server": {
+    "name": "mcp-jira-tools",
+    "version": "1.0.0"
+  },
+  "safety": {
+    "requireConfirmation": [
+      "log_work",
+      "update_issue",
+      "create_issue"
+    ]
+  }
+}
