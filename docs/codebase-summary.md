@@ -2,9 +2,9 @@
 
 ## Overview
 
-mcp-jira-tools là Node.js/TypeScript project (~1851 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 7 file chính: entry point, Jira client, tool definitions, formatter, PAT manager, utilities.
+mcp-jira-tools là Node.js/TypeScript project (~1856 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 7 file chính: entry point, Jira client, tool definitions, formatter, PAT manager, utilities.
 
-**Total LOC:** ~1851
+**Total LOC:** ~1856
 **Files:** 7 source files + 2 config files
 **Language:** TypeScript (ES2022, strict mode)
 **Build:** tsc → dist/
@@ -16,8 +16,8 @@ mcp-jira-tools là Node.js/TypeScript project (~1851 LOC) cung cấp MCP server 
 src/
 ├── index.ts (28 LOC)
 ├── jira/
-│   ├── client.ts (726 LOC)
-│   ├── tools.ts (655 LOC)
+│   ├── client.ts (727 LOC)
+│   ├── tools.ts (659 LOC)
 │   ├── formatter.ts (212 LOC)
 │   └── pat-manager.ts (149 LOC) [NEW]
 └── shared/
@@ -61,7 +61,7 @@ server.connect(transport);
 - Single transport layer: stdio (không có HTTP binding ở đây)
 - Minimal error handling (relies on tool handlers)
 
-### 2. **src/jira/client.ts** (726 LOC)
+### 2. **src/jira/client.ts** (727 LOC)
 **Purpose:** Jira REST API v2 wrapper — singleton instance gọi API, fuzzy matching, custom field resolution.
 
 **Class:** `JiraClient`
@@ -127,7 +127,7 @@ this.client.interceptors.response.use(
 );
 ```
 
-### 3. **src/jira/tools.ts** (655 LOC)
+### 3. **src/jira/tools.ts** (659 LOC)
 **Purpose:** MCP tool registration — định nghĩa 6 tools, schema validation, handlers, fuzzy matching.
 
 **Tools Registered (6 total):**
@@ -442,9 +442,9 @@ index.ts
 
 | Metric | Value | Note |
 |---|---|---|
-| Total LOC | ~1851 | Source only (excl. dist/, node_modules) |
+| Total LOC | ~1856 | Source only (excl. dist/, node_modules) |
 | Entry point | 28 LOC | Minimal, clean |
-| Longest file | client.ts (726 LOC) | Major growth: fuzzy matching + field resolution |
+| Longest file | client.ts (727 LOC) | Major growth: fuzzy matching + field resolution |
 | External deps | 4 prod | Minimal, well-chosen |
 | Dev deps | 3 | tsx, typescript, @types/node |
 | Test coverage | 0% | No unit tests (optional for v1) |
