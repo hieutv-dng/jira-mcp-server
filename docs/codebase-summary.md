@@ -4,22 +4,25 @@
 
 jira-mcp-server là Node.js/TypeScript project (~1856 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 7 file chính: entry point, Jira client, tool definitions, formatter, PAT manager, utilities.
 
-**Total LOC:** ~1856
-**Files:** 7 source files + 2 config files
+**Total LOC:** ~1900
+**Files:** 9 source files + 2 config files
 **Language:** TypeScript (ES2022, strict mode)
 **Build:** tsc → dist/
-**Transport:** stdio (Claude Desktop) + remote (supergateway + ngrok)
+**Transport:** stdio (default) | HTTP (via HTTP_PORT env var)
 
 ## File Structure
 
 ```
 src/
-├── index.ts (28 LOC)
+├── index.ts (25 LOC)
+├── transports/
+│   ├── stdio-transport.ts (12 LOC) — Stdio transport (default)
+│   └── http-transport.ts (85 LOC) — HTTP transport (Express + Bearer auth)
 ├── jira/
 │   ├── client.ts (727 LOC)
 │   ├── tools.ts (659 LOC)
 │   ├── formatter.ts (212 LOC)
-│   └── pat-manager.ts (149 LOC) [NEW]
+│   └── pat-manager.ts (149 LOC)
 └── shared/
     ├── index.ts (1 LOC)
     └── utils.ts (80 LOC)
@@ -28,38 +31,63 @@ Config:
 ├── mcp-config.json — Safety config
 ├── tsconfig.json — TypeScript config
 ├── package.json — Dependencies
-└── start-ngrok-remote.sh (157 LOC) — Remote deployment
+└── start-ngrok-remote.sh (157 LOC) — Remote deployment (legacy)
 ```
 
 ## File-by-File Breakdown
 
-### 1. **src/index.ts** (28 LOC)
-**Purpose:** Entry point — khởi tạo MCP server, register tools, connect transport.
+### 1. **src/index.ts** (25 LOC)
+**Purpose:** Entry point — khởi tạo MCP server, register tools, select transport.
 
 ```typescript
 // Pseudocode
-const server = new McpServer({
-  name: "jira-mcp-server",
-  version: "1.0.0"
-});
+const server = new McpServer({ name: "jira-mcp-server", version: "1.0.0" });
+registerJiraTools(server);
 
-// Register 6 tools (via registerJiraTools)
-registerListIssues(server);
-registerGetIssueDetail(server);
-registerLogWork(server);
-registerUpdateIssue(server);
-registerCreateIssue(server);
-registerManageJiraPat(server);
-
-// Connect stdio transport
-const transport = new StdioServerTransport();
-server.connect(transport);
+// Transport selection based on env
+if (process.env.HTTP_PORT) {
+  await startHttpTransport(server, parseInt(HTTP_PORT));
+} else {
+  await startStdioTransport(server);
+}
 ```
 
 **Key Points:**
-- Imports từ `./jira/tools.ts` (tool registrations)
-- Single transport layer: stdio (không có HTTP binding ở đây)
-- Minimal error handling (relies on tool handlers)
+- Environment-driven transport selection
+- Stdio: default, backward compatible
+- HTTP: requires `HTTP_PORT` + `MCP_AUTH_TOKEN`
+
+### 1.1 **src/transports/stdio-transport.ts** (12 LOC)
+**Purpose:** Stdio transport for Claude Desktop, Cursor, Windsurf.
+
+```typescript
+export async function startStdioTransport(server: McpServer): Promise<void> {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+```
+
+### 1.2 **src/transports/http-transport.ts** (85 LOC)
+**Purpose:** HTTP transport for LangChain, remote agents, HTTP-capable clients.
+
+**Key Features:**
+- Express + `createMcpExpressApp` (DNS rebinding protection)
+- `NodeStreamableHTTPServerTransport` (SSE-based MCP)
+- Bearer auth middleware (mandatory `MCP_AUTH_TOKEN`)
+- Public `/health` endpoint (no auth, for load balancers)
+- Per-request server instances (stateless mode)
+- Proper cleanup on connection close
+
+```typescript
+// Per-request server for stateless mode
+app.post("/mcp", async (req, res) => {
+  const server = createPerRequestServer();
+  const transport = new NodeStreamableHTTPServerTransport({...});
+  res.on("close", () => { transport.close(); server.close(); });
+  await server.connect(transport);
+  await transport.handleRequest(req, res, req.body);
+});
+```
 
 ### 2. **src/jira/client.ts** (727 LOC)
 **Purpose:** Jira REST API v2 wrapper — singleton instance gọi API, fuzzy matching, custom field resolution.
@@ -343,11 +371,17 @@ MCP SDK reads này để prompt user confirmation trước execute. Note: `updat
 ## Data Flow
 
 ```
-User Request (Claude Desktop)
+User Request
     ↓
-stdio Transport (MCP protocol)
+┌─────────────────────────────────────────┐
+│ Transport Selection (index.ts)          │
+├─────────────────┬───────────────────────┤
+│ Stdio (default) │ HTTP (HTTP_PORT set)  │
+│ Claude Desktop  │ LangChain, remote     │
+│ Cursor/Windsurf │ Bearer auth required  │
+└─────────────────┴───────────────────────┘
     ↓
-MCP Server (index.ts)
+MCP Server (McpServer)
     ↓
 Tool Handler (tools.ts)
     ├─ Input Validation (Zod)
@@ -370,7 +404,7 @@ Output (Markdown text)
     ↓
 MCP Protocol Response
     ↓
-Claude Desktop / Claude Code
+AI Client (Claude/LangChain/etc.)
 ```
 
 ## Key Design Patterns
@@ -481,25 +515,29 @@ return {
 
 ## Deployment
 
-### Local (stdio - Claude Desktop)
+### Stdio Transport (default - Claude Desktop, Cursor, Windsurf)
 ```bash
 npm run build
-npm start  # Runs node dist/index.js
-# Connect via MCP config in Claude Desktop Settings → Developer
+npm start  # stdio transport
+# Connect via MCP config in Claude Desktop/Cursor/Windsurf
 ```
 
-### Remote (supergateway + ngrok)
+### HTTP Transport (LangChain, remote agents)
 ```bash
-./start-ngrok-remote.sh  # Automated deployment
-# Outputs Claude config snippets for remote connection
+npm run build
+HTTP_PORT=3000 MCP_AUTH_TOKEN=your-secret npm start
+# Connect via HTTP: http://localhost:3000/mcp
+# Health check: http://localhost:3000/health
 ```
 
-**start-ngrok-remote.sh handles:**
-- Pulls supergateway v3.4.3 Docker image
-- Runs jira-mcp-server in container
-- Bridges stdio → Streamable HTTP (supergateway)
-- Creates ngrok tunnel for remote access
-- Health checks, process monitoring, graceful shutdown
+**See:** [Connection Guide](./connection-guide.md) for client-specific setup.
+
+### Remote (legacy - supergateway + ngrok)
+```bash
+./start-ngrok-remote.sh  # Legacy deployment
+```
+
+**Note:** HTTP transport is now recommended over supergateway for remote access.
 
 ## Extension Points
 

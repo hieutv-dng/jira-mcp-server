@@ -1,28 +1,27 @@
-import "dotenv/config"; // Load .env trước tất cả mọi thứ
+import "dotenv/config";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerJiraTools } from "./jira/tools.js";
+import { startStdioTransport } from "./transports/stdio-transport.js";
+import { startHttpTransport } from "./transports/http-transport.js";
 
-// ─────────────────────────────────────────────
-// Khởi tạo MCP Server — Jira Tools Only
-// ─────────────────────────────────────────────
 const server = new McpServer({
   name: "jira-mcp-server",
   version: "1.0.0",
 });
 
-// Đăng ký Jira tools vào server
 registerJiraTools(server);
 
-// StdioServerTransport = Claude Desktop giao tiếp
-// với MCP qua stdin/stdout (process pipe)
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("✅ MCP Jira Tools Server đang chạy...");
+  const httpPort = process.env.HTTP_PORT;
+
+  if (httpPort) {
+    await startHttpTransport(server, parseInt(httpPort, 10));
+  } else {
+    await startStdioTransport(server);
+  }
 }
 
 main().catch((err) => {
-  console.error("❌ Lỗi khởi động server:", err);
+  console.error("Server startup error:", err);
   process.exit(1);
 });

@@ -61,10 +61,18 @@ cp .env.example .env.local
 
 ```bash
 npm run build       # Compile TypeScript
-npm start          # Chạy server (stdio transport)
+npm start          # Chạy server (stdio transport - default)
 ```
 
 Server sẽ lắng nghe trên stdin/stdout (MCP protocol).
+
+**HTTP Transport (cho LangChain, remote agents):**
+
+```bash
+HTTP_PORT=3000 MCP_AUTH_TOKEN=your-secret npm start
+```
+
+Xem thêm: [Connection Guide](docs/connection-guide.md)
 
 ### 5. Kết nối Claude Desktop
 
@@ -433,6 +441,15 @@ npm run inspect
 
 ## Tài liệu chi tiết
 
+### Connection Guides
+- **[Connection Guide](docs/connection-guide.md)** — Tổng quan các phương thức kết nối
+- **[Claude Desktop](docs/claude-desktop-setup.md)** — Cấu hình cho Claude Desktop
+- **[Cursor](docs/cursor-setup.md)** — Cấu hình cho Cursor IDE
+- **[Windsurf](docs/windsurf-setup.md)** — Cấu hình cho Windsurf IDE
+- **[LangChain](docs/langchain-setup.md)** — Tích hợp với LangChain Python
+- **[HTTP API Reference](docs/http-api-reference.md)** — API reference cho HTTP transport
+
+### Technical Docs
 - **`docs/project-overview-pdr.md`** — Mục đích project, requirements, roadmap
 - **`docs/codebase-summary.md`** — Phân tích từng file, data flow, patterns
 - **`docs/code-standards.md`** — Naming, conventions, error handling
