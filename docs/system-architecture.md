@@ -12,13 +12,12 @@
 │ jira-mcp-server Server (Node.js/TypeScript)          │
 ├─────────────────────────────────────────────────────┤
 │ ┌─────────────────┐  ┌──────────────────────────┐   │
-│ │ MCP Server      │  │ Tool Handlers (6 tools)  │   │
+│ │ MCP Server      │  │ Tool Handlers (5 tools)  │   │
 │ │ - connect       │  │ - list_issues            │   │
 │ │ - resources     │  │ - get_issue_detail       │   │
 │ │ - tools         │  │ - log_work               │   │
 │ │ - prompts       │  │ - update_issue           │   │
 │ │                 │  │ - create_issue           │   │
-│ │                 │  │ - manage_jira_pat        │   │
 │ └─────────────────┘  └──────────────────────────┘   │
 │         ↓                    ↓                       │
 │  ┌──────────────────────────────────┐               │
@@ -121,7 +120,6 @@ User Request
 | `log_work` | key, hours, date | addWorklog() | Confirmation message |
 | `update_issue` | key, status, comment | getTransitions() → transitionIssue() + addComment() | New status message |
 | `create_issue` | project, summary, fields | createIssue() + fuzzy resolve custom fields | New issue key + link |
-| `manage_jira_pat` | action: get/update | getCurrentPat() or updatePat() | PAT metadata or update result |
 
 **Safety Layer:**
 ```
@@ -382,8 +380,7 @@ Entry point:
     ├─→ get_issue_detail (see details)
     │     ↓
     │     ├─→ log_work (record hours)
-    │     ├─→ update_issue (change status + comment)
-    │     └─→ manage_jira_pat (update token if needed)
+    │     └─→ update_issue (change status + comment)
     │
     └─→ create_issue (report new issue)
          ↓
@@ -400,11 +397,10 @@ Workflow:
 ```typescript
 {
   'list_issues': 'get_issue_detail or create_issue',
-  'get_issue_detail': 'log_work or update_issue or manage_jira_pat',
+  'get_issue_detail': 'log_work or update_issue',
   'log_work': 'update_issue',
   'update_issue': 'list_issues',
-  'create_issue': 'get_issue_detail',
-  'manage_jira_pat': '(no chain)'
+  'create_issue': 'get_issue_detail'
 }
 ```
 

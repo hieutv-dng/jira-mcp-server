@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MCP Server providing Jira integration for Claude AI. Targets Jira Server/Data Center (not Cloud) with PAT authentication. 6 tools: list_issues, get_issue_detail, log_work, update_issue, create_issue, manage_jira_pat.
+MCP Server providing Jira integration for Claude AI. Targets Jira Server/Data Center (not Cloud) with PAT authentication. 5 tools: list_issues, get_issue_detail, log_work, update_issue, create_issue.
 
 ## Build & Run Commands
 
@@ -23,7 +23,6 @@ npm run inspect    # MCP Inspector for testing tools
 - `src/jira/tools.ts` — Tool registration, Zod schemas, request handlers
 - `src/jira/client.ts` — JiraClient class wrapping Axios for REST API
 - `src/jira/formatter.ts` — Markdown output formatting for AI consumption
-- `src/jira/pat-manager.ts` — PAT token management (view/update)
 - `src/shared/utils.ts` — Error handling wrapper, tool chaining hints
 
 **Data flow:** Claude → MCP stdio → tools.ts handler → JiraClient API call → formatter → Markdown response

@@ -2,10 +2,10 @@
 
 ## Overview
 
-jira-mcp-server là Node.js/TypeScript project (~1856 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 7 file chính: entry point, Jira client, tool definitions, formatter, PAT manager, utilities.
+jira-mcp-server là Node.js/TypeScript project (~1700 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 6 file chính: entry point, Jira client, tool definitions, formatter, utilities.
 
-**Total LOC:** ~1900
-**Files:** 9 source files + 2 config files
+**Total LOC:** ~1700
+**Files:** 8 source files + 2 config files
 **Language:** TypeScript (ES2022, strict mode)
 **Build:** tsc → dist/
 **Transport:** stdio (default) | HTTP (via HTTP_PORT env var)
@@ -20,9 +20,8 @@ src/
 │   └── http-transport.ts (85 LOC) — HTTP transport (Express + Bearer auth)
 ├── jira/
 │   ├── client.ts (727 LOC)
-│   ├── tools.ts (659 LOC)
-│   ├── formatter.ts (212 LOC)
-│   └── pat-manager.ts (149 LOC)
+│   ├── tools.ts (560 LOC)
+│   └── formatter.ts (212 LOC)
 └── shared/
     ├── index.ts (1 LOC)
     └── utils.ts (80 LOC)
@@ -155,10 +154,10 @@ this.client.interceptors.response.use(
 );
 ```
 
-### 3. **src/jira/tools.ts** (659 LOC)
-**Purpose:** MCP tool registration — định nghĩa 6 tools, schema validation, handlers, fuzzy matching.
+### 3. **src/jira/tools.ts** (560 LOC)
+**Purpose:** MCP tool registration — định nghĩa 5 tools, schema validation, handlers, fuzzy matching.
 
-**Tools Registered (6 total):**
+**Tools Registered (5 total):**
 
 | Tool | Input Schema | Handler | Safety |
 |---|---|---|---|
@@ -167,7 +166,6 @@ this.client.interceptors.response.use(
 | `log_work` | `{key, hours, date?, comment?}` | addWorklog | **CONFIRM** |
 | `update_issue` | `{key, status?, comment?, dryRun?}` | getTransitions → transitionIssue + addComment | **CONFIRM** |
 | `create_issue` | `{projectKey, issueType, summary, description, priority, labels, spda?, congDoan?, dueDate?, assignee?, epicKey?, dryRun?}` | createIssue + metadata + fuzzy resolve | **CONFIRM** |
-| `manage_jira_pat` | `{action: 'get'|'update', pat?}` | getCurrentPat() or updatePat() | Mixed (view=no, update=yes) |
 
 **Old Tools (REMOVED/RENAMED):**
 - `list_my_open_issues` → `list_issues` (expanded with filters)
@@ -260,26 +258,7 @@ User cannot login with SSO...
 - **Date Formatting:** Vietnamese locale (vi-VN) — 27/03/2026 10:30
 - **Jira Markup → Markdown:** Remove wiki formatting, convert to standard MD
 
-### 5.5 **src/jira/pat-manager.ts** (149 LOC) [NEW]
-**Purpose:** PAT lifecycle management — view/update token at runtime without restart.
-
-**Functions:**
-
-| Function | Purpose | Returns |
-|---|---|---|
-| `getCurrentPat()` | Read JIRA_PAT from .env, return metadata | `{pat, envPath, exists, masked}` |
-| `updatePat(newPat)` | Write to .env, update process.env | `{previousMasked, newMasked, action}` |
-| `validatePat(pat)` | Basic validation (non-empty, ≥10 chars) | `{valid: boolean, message?: string}` |
-| `maskPat(pat)` | Hide credentials (first 4 + "****" + last 4) | `string` |
-
-**Env File Resolution:**
-```
-1. ENV_FILE_PATH env var (if set)
-2. .env in project root
-3. .env in CWD
-```
-
-### 6. **src/shared/utils.ts** (80 LOC)
+### 5. **src/shared/utils.ts** (80 LOC)
 **Purpose:** Error handling + tool chaining utility.
 
 **Functions:**
@@ -295,11 +274,10 @@ User cannot login with SSO...
 ```typescript
 const TOOL_CHAINING = {
   'list_issues': 'get_issue_detail or create_issue',
-  'get_issue_detail': 'log_work or update_issue or manage_jira_pat',
+  'get_issue_detail': 'log_work or update_issue',
   'log_work': 'update_issue',
   'update_issue': 'list_issues',
-  'create_issue': 'get_issue_detail',
-  'manage_jira_pat': '(no chain)'
+  'create_issue': 'get_issue_detail'
 };
 ```
 
@@ -313,7 +291,7 @@ formatToolError(new Error("API timeout"))
 → { code: "INTERNAL_ERROR", message: "API timeout" }
 ```
 
-### 7. **src/shared/index.ts** (1 LOC)
+### 6. **src/shared/index.ts** (1 LOC)
 **Purpose:** Re-exports (usually empty or minimal).
 
 ```typescript
@@ -331,8 +309,7 @@ Safety configuration:
     "requireConfirmation": [
       "log_work",
       "update_issue",
-      "create_issue",
-      "manage_jira_pat"
+      "create_issue"
     ]
   }
 }
@@ -476,8 +453,8 @@ index.ts
 
 | Metric | Value | Note |
 |---|---|---|
-| Total LOC | ~1856 | Source only (excl. dist/, node_modules) |
-| Entry point | 28 LOC | Minimal, clean |
+| Total LOC | ~1700 | Source only (excl. dist/, node_modules) |
+| Entry point | 25 LOC | Minimal, clean |
 | Longest file | client.ts (727 LOC) | Major growth: fuzzy matching + field resolution |
 | External deps | 4 prod | Minimal, well-chosen |
 | Dev deps | 3 | tsx, typescript, @types/node |
@@ -578,8 +555,8 @@ server.setRequestHandler(Tool, async (req: ToolRequest) => {
   - No Jira Cloud support (OAuth not implemented, PAT only)
   - Drift detection heuristic (not 100% accurate)
   - Custom field support: hardcoded fields (spda, congDoan) + fallback resolution
-- **Recent Changes (v1.1):**
-  - Added PAT runtime management (manage_jira_pat tool)
+- **Recent Changes (v1.2):**
+  - Removed manage_jira_pat (multi-tenant HTTP headers auth)
   - Enhanced create_issue with fuzzy field matching
   - Merged update_issue_status + add_comment → update_issue
   - Expanded list_issues with filtering (assignee, role, status)

@@ -34,9 +34,8 @@
 Claude Desktop / Claude Code
         ↓ (MCP protocol via stdio)
 jira-mcp-server Server (Node.js/TypeScript)
-        ├── 6 Tools: list_issues, get_issue_detail, log_work, update_issue, create_issue, manage_jira_pat
+        ├── 5 Tools: list_issues, get_issue_detail, log_work, update_issue, create_issue
         ├── JiraClient: Jira REST API v2 (axios + PAT auth) + fuzzy matching
-        ├── PATManager: PAT runtime updates (no restart needed)
         ├── Formatter: Markdown output for AI comprehension
         └── Error Handler: Safety validation + confirmation flow
         ↓
@@ -73,13 +72,12 @@ Jira Server/Data Center (REST API v2)
 
 ### Acceptance Criteria
 
-- ✅ All 6 core tools callable from Claude Desktop/Code
+- ✅ All 5 core tools callable from Claude Desktop/Code
   - list_issues (search + filter)
   - get_issue_detail (view issue + drift detection)
   - log_work (record hours)
   - update_issue (transition + comment)
   - create_issue (with fuzzy field matching)
-  - manage_jira_pat (PAT viewer/updater)
 - ✅ Jira responses formatted as markdown (readable for AI)
 - ✅ Write operations require user confirmation (CLI prompts)
 - ✅ Drift detection warns when issue outdated
@@ -125,12 +123,12 @@ Safety configuration defining which tools require user confirmation:
 ```json
 {
   "tools": {
-    "requireConfirmation": ["log_work", "update_issue", "create_issue", "manage_jira_pat"]
+    "requireConfirmation": ["log_work", "update_issue", "create_issue"]
   }
 }
 ```
 
-**Changes:** `update_issue_status` + `add_comment` merged → `update_issue`. Added `manage_jira_pat` for PAT updates.
+**Changes:** `update_issue_status` + `add_comment` merged → `update_issue`. Multi-tenant HTTP headers auth replaces PAT management.
 
 ## Dependencies
 
@@ -149,7 +147,7 @@ Safety configuration defining which tools require user confirmation:
 
 | Metric | Target | Measurement |
 |--------|--------|---|
-| Tool Availability | 100% | All 6 tools callable, no timeout errors |
+| Tool Availability | 100% | All 5 tools callable, no timeout errors |
 | Response Time (API) | <3s (excl. Jira) | Latency measured via logs |
 | User Confirmation | 100% on writes | All write operations prompt user |
 | Error Recovery | 95%+ | Graceful errors, clear messages |

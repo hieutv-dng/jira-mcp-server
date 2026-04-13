@@ -66,4 +66,3 @@ print(result)
 | `log_work` | Log work time |
 | `update_issue` | Update issue status/comment |
 | `create_issue` | Create new issue |
-| `manage_jira_pat` | Manage PAT token |
