@@ -177,32 +177,37 @@ export function registerJiraTools(server: McpServer) {
   );
 
   // ── TOOL 3: Logwork ──────────────────────────
+  // ── TOOL 3: Logwork ──────────────────────────
   server.tool(
     "log_work",
     "Ghi nhận thời gian làm việc (logwork) lên một Jira issue. " +
     "Dùng sau khi hoàn thành công việc để track effort. " +
-    "Ví dụ: đã làm 2 tiếng fix bug PROJAI-456. " +
+    "Ví dụ: đã làm 2 tiếng fix bug VNPTAI-456. " +
     "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI gọi tool này — không được tự động submit. " +
     "Hiển thị nội dung sẽ log cho user review trước.",
     {
       issueKey: z
         .string()
-        .describe("Jira issue key, VD: 'PROJAI-123'"),
+        .describe("Jira issue key, VD: 'VNPTAI-123'"),
       timeSpent: z
         .string()
         .describe("Thời gian theo format Jira: '2h', '30m', '1h 30m', '1d'. 1d = 8h."),
       comment: z
         .string()
         .describe("Mô tả ngắn gọn đã làm gì trong khoảng thời gian này"),
+      startedAt: z
+        .string()
+        .describe("Ngày bắt đầu làm việc, format YYYY-MM-DD (VD: '2026-03-02'). BẮT BUỘC phải truyền."),
     },
-    withErrorHandler("log_work", async ({ issueKey, timeSpent, comment }) => {
-      const result = await jiraClient.addWorklog(issueKey, timeSpent, comment, new Date().toISOString());
+    withErrorHandler("log_work", async ({ issueKey, timeSpent, comment, startedAt }) => {
+      const result = await jiraClient.addWorklog(issueKey, timeSpent, comment, startedAt);
       return {
         content: [{
           type: "text",
           text: `✅ Đã logwork thành công!\n` +
                 `📌 Issue: ${issueKey}\n` +
                 `⏱️  Thời gian: ${timeSpent}\n` +
+                `📅 Ngày: ${startedAt}\n` +
                 `📝 Ghi chú: ${comment}\n` +
                 `🆔 Worklog ID: ${result.id}` + getChainHint("log_work"),
         }],
