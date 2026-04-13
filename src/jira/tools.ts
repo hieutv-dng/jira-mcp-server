@@ -53,7 +53,7 @@ export function registerJiraTools(server: McpServer) {
       projectKey: z
         .string()
         .optional()
-        .describe("Filter theo project key cụ thể, VD: 'VNPTAI'. Bỏ trống = tất cả project."),
+        .describe("Filter theo project key cụ thể, VD: 'PROJAI'. Bỏ trống = tất cả project."),
       assigneeFilter: z
         .string()
         .default("currentUser()")
@@ -86,7 +86,7 @@ export function registerJiraTools(server: McpServer) {
       customJql: z
         .string()
         .optional()
-        .describe("JQL tùy chỉnh — full override, không inject thêm gì. VD: 'project = VNPTAI AND sprint in openSprints()'"),
+        .describe("JQL tùy chỉnh — full override, không inject thêm gì. VD: 'project = PROJAI AND sprint in openSprints()'"),
       maxResults: z
         .number()
         .min(1)
@@ -157,7 +157,7 @@ export function registerJiraTools(server: McpServer) {
     {
       issueKey: z
         .string()
-        .describe("Jira issue key, VD: 'VNPTAI-123'"),
+        .describe("Jira issue key, VD: 'PROJAI-123'"),
     },
     withErrorHandler("get_issue_detail", async ({ issueKey }) => {
       const issue = await jiraClient.getIssue(issueKey);
@@ -181,32 +181,28 @@ export function registerJiraTools(server: McpServer) {
     "log_work",
     "Ghi nhận thời gian làm việc (logwork) lên một Jira issue. " +
     "Dùng sau khi hoàn thành công việc để track effort. " +
-    "Ví dụ: đã làm 2 tiếng fix bug VNPTAI-456. " +
+    "Ví dụ: đã làm 2 tiếng fix bug PROJAI-456. " +
     "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI gọi tool này — không được tự động submit. " +
     "Hiển thị nội dung sẽ log cho user review trước.",
     {
       issueKey: z
         .string()
-        .describe("Jira issue key, VD: 'VNPTAI-123'"),
+        .describe("Jira issue key, VD: 'PROJAI-123'"),
       timeSpent: z
         .string()
         .describe("Thời gian theo format Jira: '2h', '30m', '1h 30m', '1d'. 1d = 8h."),
       comment: z
         .string()
         .describe("Mô tả ngắn gọn đã làm gì trong khoảng thời gian này"),
-      startedAt: z
-        .string()
-        .describe("Ngày bắt đầu làm việc, format YYYY-MM-DD (VD: '2026-03-02'). BẮT BUỘC phải truyền."),
     },
-    withErrorHandler("log_work", async ({ issueKey, timeSpent, comment, startedAt }) => {
-      const result = await jiraClient.addWorklog(issueKey, timeSpent, comment, startedAt);
+    withErrorHandler("log_work", async ({ issueKey, timeSpent, comment }) => {
+      const result = await jiraClient.addWorklog(issueKey, timeSpent, comment);
       return {
         content: [{
           type: "text",
           text: `✅ Đã logwork thành công!\n` +
                 `📌 Issue: ${issueKey}\n` +
                 `⏱️  Thời gian: ${timeSpent}\n` +
-                `📅 Ngày: ${startedAt}\n` +
                 `📝 Ghi chú: ${comment}\n` +
                 `🆔 Worklog ID: ${result.id}` + getChainHint("log_work"),
         }],
@@ -223,7 +219,7 @@ export function registerJiraTools(server: McpServer) {
     "Truyền transitionName để chuyển trạng thái (kèm comment, resolution nếu cần). " +
     "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi status hoặc thêm comment.",
     {
-      issueKey: z.string().describe("Jira issue key, VD: 'VNPTAI-123'"),
+      issueKey: z.string().describe("Jira issue key, VD: 'PROJAI-123'"),
       dryRun: z.boolean().default(false)
         .describe("true = chỉ xem transitions khả dụng, không thay đổi gì"),
       transitionName: z.string().optional()
@@ -293,20 +289,20 @@ export function registerJiraTools(server: McpServer) {
     "Dùng khi phân rã một task lớn thành các sub-task nhỏ hơn, " +
     "hoặc khi tạo task từ file mô tả nghiệp vụ .md. " +
     "Nếu người dùng yêu cầu tạo task mới như 'tạo task mới cho tôi nhé', hãy yêu cầu họ cung cấp các thông tin dựa trên ví dụ sau:\n" +
-    "- Dự án (Project Key): GOCONNECT\n" +
+    "- Dự án (Project Key): PROJECT_KEY\n" +
     "- Loại Issue: Task\n" +
     "- Tiêu đề: Phối hợp thực AM UBNB Hoài Hôi\n" +
     "- Mô tả: Phối hợp thực AM UBNB Hoài Hôi\n" +
     "- Mức độ ưu tiên: Low\n" +
-    "- Nhãn (Labels): GoConnect\n" +
-    "- Mã SPDA: VNPT GoConnect\n" +
+    "- Nhãn (Labels): ProjectLabels\n" +
+    "- Mã SPDA: PROJ ProjectSPDA\n" +
     "- Công đoạn: Nghiên cứu và phát triển\n" +
     "- Due Date: 2026-04-03\n" +
     "- Assign cho: nghiath (optional)\n" +
-    "- Epic: GOCONNECT-100 (optional)\n" +
+    "- Epic: PROJECT-100 (optional)\n" +
     "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI gọi tool này — hiển thị nội dung issue sẽ tạo cho user duyệt.",
     {
-      projectKey: z.string().describe("Project key, VD: 'VNPTAI'"),
+      projectKey: z.string().describe("Project key, VD: 'PROJAI'"),
       dryRun: z.boolean().default(false)
         .describe("true = chỉ xem metadata (custom fields, users, epics) — không tạo issue"),
       issueType: z
@@ -330,7 +326,7 @@ export function registerJiraTools(server: McpServer) {
       spda: z
         .string()
         .optional()
-        .describe("Mã SPDA (customfield_10100). VD: 'VNPT GoConnect' (bắt buộc khi tạo issue)"),
+        .describe("Mã SPDA (customfield_10100). VD: 'PROJ XXXXX' (bắt buộc khi tạo issue)"),
       congDoan: z
         .string()
         .optional()
@@ -350,7 +346,7 @@ export function registerJiraTools(server: McpServer) {
         .string()
         .optional()
         .describe(
-          "Key của Epic muốn liên kết. VD: 'GOCONNECT-100'. " +
+          "Key của Epic muốn liên kết. VD: 'PROJ-100'. " +
           "Dùng dryRun=true để xem danh sách Epic đang mở. Bỏ trống = không link Epic."
         ),
     },
