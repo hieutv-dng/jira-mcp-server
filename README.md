@@ -191,7 +191,7 @@ Thêm `X-Jira-*` headers vào MCP client config:
 {
   "mcpServers": {
     "jira": {
-      "type": "streamableHttp",
+      "type": "http",
       "url": "https://mcp.company.com/mcp",
       "headers": {
         "Authorization": "Bearer <MCP_AUTH_TOKEN>",
