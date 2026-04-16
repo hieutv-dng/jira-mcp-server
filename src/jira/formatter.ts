@@ -13,12 +13,15 @@ interface JiraIssue {
   fields: {
     summary: string;
     status: { name: string };
+    resolution: { name: string } | null;
     priority: { name: string };
     issuetype: { name: string };
     assignee: { displayName: string } | null;
+    reporter: { displayName: string } | null;
     description: string | null;
     created: string;
     updated: string;
+    duedate: string | null;
     labels: string[];
     subtasks: Array<{ key: string; fields: { summary: string; status: { name: string } } }>;
     comment: { comments: Array<{ author: { displayName: string }; body: string; created: string }> };
@@ -41,11 +44,15 @@ export function formatIssueListForAI(issues: JiraIssue[], total: number): string
     const priority = priorityEmoji(f.priority?.name);
     const storyPoints = f.customfield_10016 ? ` | ${f.customfield_10016} SP` : "";
     const updated = formatDate(f.updated);
+    const dueDate = f.duedate ? formatDate(f.duedate) : null;
+
+    const resolution = f.resolution?.name ? ` → ${f.resolution.name}` : "";
 
     lines.push(
       `## ${priority} [${issue.key}] ${f.summary}`,
-      `- **Status:** ${f.status?.name}`,
+      `- **Status:** ${f.status?.name}${resolution}`,
       `- **Type:** ${f.issuetype?.name}${storyPoints}`,
+      dueDate ? `- **Due:** ${dueDate}` : `- **Due:** ⚠️ Chưa set`,
       `- **Cập nhật:** ${updated}`,
       f.labels?.length ? `- **Labels:** ${f.labels.join(", ")}` : "",
       ""
@@ -78,9 +85,11 @@ export function formatIssueForAI(issue: JiraIssue): string {
   lines.push(
     "## 📌 Thông tin chung",
     `- **Loại:** ${f.issuetype?.name}`,
-    `- **Trạng thái:** ${f.status?.name}`,
+    `- **Trạng thái:** ${f.status?.name}${f.resolution?.name ? ` (${f.resolution.name})` : ""}`,
     `- **Độ ưu tiên:** ${f.priority?.name}`,
     `- **Assignee:** ${f.assignee?.displayName ?? "Chưa assign"}`,
+    `- **Reporter:** ${f.reporter?.displayName ?? "N/A"}`,
+    `- **Due date:** ${f.duedate ? formatDate(f.duedate) : "⚠️ Chưa set"}`,
     `- **Tạo lúc:** ${formatDate(f.created)}`,
     `- **Cập nhật:** ${formatDate(f.updated)}`,
     f.customfield_10016 ? `- **Story Points:** ${f.customfield_10016}` : "",
