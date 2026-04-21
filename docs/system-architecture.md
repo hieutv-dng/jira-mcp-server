@@ -12,11 +12,12 @@
 │ jira-mcp-server Server (Node.js/TypeScript)          │
 ├─────────────────────────────────────────────────────┤
 │ ┌─────────────────┐  ┌──────────────────────────┐   │
-│ │ MCP Server      │  │ Tool Handlers (5 tools)  │   │
-│ │ - connect       │  │ - list_issues            │   │
-│ │ - resources     │  │ - get_issue_detail       │   │
-│ │ - tools         │  │ - log_work               │   │
-│ │ - prompts       │  │ - update_issue           │   │
+│ │ MCP Server      │  │ Tool Handlers (6 tools)  │   │
+│ │ - connect       │  │ - get_current_user       │   │
+│ │ - resources     │  │ - list_issues            │   │
+│ │ - tools         │  │ - get_issue_detail       │   │
+│ │ - prompts       │  │ - log_work               │   │
+│ │                 │  │ - update_issue           │   │
 │ │                 │  │ - create_issue           │   │
 │ └─────────────────┘  └──────────────────────────┘   │
 │         ↓                    ↓                       │
@@ -115,6 +116,7 @@ User Request
 
 | Tool | Input | Processing | Output |
 |---|---|---|---|
+| `get_current_user` | none | getCurrentUser() (`/myself`) | Username, email, timezone |
 | `list_issues` | JQL + filters | searchIssues() + filter | Issue list table |
 | `get_issue_detail` | Issue key | getIssue() + drift check | Detail markdown + warning |
 | `log_work` | key, hours, date | addWorklog() | Confirmation message |
@@ -375,6 +377,8 @@ User sees drift warning, can call log_work or updateIssueStatus next
 
 ```
 Entry point:
+  get_current_user (verify PAT, get username)
+    ↓
   list_issues
     ↓
     ├─→ get_issue_detail (see details)
@@ -387,15 +391,17 @@ Entry point:
          └─→ get_issue_detail
 
 Workflow:
-  1. list_issues → (see what's open)
-  2. get_issue_detail → (pick one issue)
-  3. log_work → (record effort)
-  4. update_issue → (add comment + move to Done)
+  1. get_current_user → (verify PAT + fetch username)
+  2. list_issues → (see what's open)
+  3. get_issue_detail → (pick one issue)
+  4. log_work → (record effort)
+  5. update_issue → (add comment + move to Done)
 ```
 
 **chainHint Values (UPDATED):**
 ```typescript
 {
+  'get_current_user': 'list_issues (assigneeFilter defaults to currentUser())',
   'list_issues': 'get_issue_detail or create_issue',
   'get_issue_detail': 'log_work or update_issue',
   'log_work': 'update_issue',

@@ -61,6 +61,7 @@ print(result)
 
 | Tool | Description |
 |------|-------------|
+| `get_current_user` | Fetch current user info (verify PAT, get username) |
 | `list_issues` | List Jira issues with filters |
 | `get_issue_detail` | Get full issue details |
 | `log_work` | Log work time |

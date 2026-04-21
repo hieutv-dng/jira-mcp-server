@@ -155,12 +155,13 @@ this.client.interceptors.response.use(
 ```
 
 ### 3. **src/jira/tools.ts** (560 LOC)
-**Purpose:** MCP tool registration — định nghĩa 5 tools, schema validation, handlers, fuzzy matching.
+**Purpose:** MCP tool registration — định nghĩa 6 tools, schema validation, handlers, fuzzy matching.
 
-**Tools Registered (5 total):**
+**Tools Registered (6 total):**
 
 | Tool | Input Schema | Handler | Safety |
 |---|---|---|---|
+| `get_current_user` | `{}` (no args) | getCurrentUser() via `/myself` | No confirm |
 | `list_issues` | `{project?, assigneeFilter?, roleFilter?, statusFilter?, maxResults?}` | searchIssues + filters | No confirm |
 | `get_issue_detail` | `{key}` | getIssue + drift detection | Drift warning |
 | `log_work` | `{key, hours, date?, comment?}` | addWorklog | **CONFIRM** |
@@ -273,6 +274,7 @@ User cannot login with SSO...
 
 ```typescript
 const TOOL_CHAINING = {
+  'get_current_user': 'list_issues (assigneeFilter defaults to currentUser())',
   'list_issues': 'get_issue_detail or create_issue',
   'get_issue_detail': 'log_work or update_issue',
   'log_work': 'update_issue',
@@ -556,6 +558,8 @@ server.setRequestHandler(Tool, async (req: ToolRequest) => {
   - Drift detection heuristic (not 100% accurate)
   - Custom field support: hardcoded fields (spda, congDoan) + fallback resolution
 - **Recent Changes (v1.2):**
+  - Added `get_current_user` tool (GET /myself) — verify PAT, fetch username for JQL
+  - Added `duedate`, `reporter`, `resolution` fields to search/formatters
   - Removed manage_jira_pat (multi-tenant HTTP headers auth)
   - Enhanced create_issue with fuzzy field matching
   - Merged update_issue_status + add_comment → update_issue

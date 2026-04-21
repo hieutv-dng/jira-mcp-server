@@ -34,7 +34,7 @@
 Claude Desktop / Claude Code
         ↓ (MCP protocol via stdio)
 jira-mcp-server Server (Node.js/TypeScript)
-        ├── 5 Tools: list_issues, get_issue_detail, log_work, update_issue, create_issue
+        ├── 6 Tools: get_current_user, list_issues, get_issue_detail, log_work, update_issue, create_issue
         ├── JiraClient: Jira REST API v2 (axios + PAT auth) + fuzzy matching
         ├── Formatter: Markdown output for AI comprehension
         └── Error Handler: Safety validation + confirmation flow
@@ -56,6 +56,7 @@ Jira Server/Data Center (REST API v2)
 | FR6 | Create new issue | MUST | ✅ |
 | FR7 | Detect issue drift (stale descriptions) | SHOULD | ✅ |
 | FR8 | Tool chaining (suggest next action) | SHOULD | ✅ |
+| FR9 | Get current user (verify PAT + username for JQL) | SHOULD | ✅ |
 
 ### Non-Functional Requirements (NFRs)
 
@@ -72,7 +73,8 @@ Jira Server/Data Center (REST API v2)
 
 ### Acceptance Criteria
 
-- ✅ All 5 core tools callable from Claude Desktop/Code
+- ✅ All 6 core tools callable from Claude Desktop/Code
+  - get_current_user (verify PAT, fetch username)
   - list_issues (search + filter)
   - get_issue_detail (view issue + drift detection)
   - log_work (record hours)
@@ -147,7 +149,7 @@ Safety configuration defining which tools require user confirmation:
 
 | Metric | Target | Measurement |
 |--------|--------|---|
-| Tool Availability | 100% | All 5 tools callable, no timeout errors |
+| Tool Availability | 100% | All 6 tools callable, no timeout errors |
 | Response Time (API) | <3s (excl. Jira) | Latency measured via logs |
 | User Confirmation | 100% on writes | All write operations prompt user |
 | Error Recovery | 95%+ | Graceful errors, clear messages |

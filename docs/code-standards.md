@@ -56,7 +56,8 @@ const canTransition = true;
 #### Tool Names & Descriptions (UPDATED)
 
 ```typescript
-// Tool names: snake_case (MCP convention) — 5 tools total
+// Tool names: snake_case (MCP convention) — 6 tools total
+'get_current_user'      // fetch current user info from PAT (GET /myself)
 'list_issues'           // list issues with filters
 'get_issue_detail'      // get single issue + drift detection
 'log_work'              // record work hours
@@ -129,7 +130,7 @@ src/
 ├── index.ts              — Entry point (connect server + transport)
 ├── jira/
 │   ├── client.ts         — JiraClient class + API methods + fuzzy matching
-│   ├── tools.ts          — Tool registration + handlers (5 tools)
+│   ├── tools.ts          — Tool registration + handlers (6 tools)
 │   └── formatter.ts      — Output formatting for AI
 └── shared/
     ├── index.ts          — Re-exports
@@ -513,6 +514,7 @@ const storyPoints = issue.customfield_10029 ?? 0;
 ```typescript
 // shared/utils.ts (UPDATED)
 export const TOOL_CHAINING = {
+  'get_current_user': 'list_issues',
   'list_issues': 'get_issue_detail or create_issue',
   'get_issue_detail': 'log_work or update_issue',
   'log_work': 'update_issue',
