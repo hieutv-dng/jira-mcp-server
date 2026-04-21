@@ -59,6 +59,8 @@ export function withErrorHandler<TArgs extends Record<string, unknown>, TExtra =
 // ─────────────────────────────────────────────
 
 export const TOOL_CHAINING: Record<string, string> = {
+  get_current_user:
+    "→ Tiếp: `list_issues` để xem task của bạn (assigneeFilter mặc định = currentUser()).",
   list_issues:
     "→ Tiếp: `get_issue_detail` để đọc chi tiết task cần làm.",
   get_issue_detail:

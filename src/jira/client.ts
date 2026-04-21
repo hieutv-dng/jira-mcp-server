@@ -121,6 +121,26 @@ export class JiraClient {
     );
   }
 
+  // ─── CURRENT USER ─────────────────────────
+
+  /**
+   * Lấy thông tin user hiện tại (ứng với PAT đang dùng)
+   * Endpoint: GET /rest/api/2/myself
+   * Dùng để verify PAT hợp lệ và biết username để dùng trong JQL
+   */
+  async getCurrentUser() {
+    const res = await this.http.get("/myself");
+    return res.data as {
+      key: string;
+      name: string;
+      displayName: string;
+      emailAddress?: string;
+      active: boolean;
+      timeZone?: string;
+      locale?: string;
+    };
+  }
+
   // ─── ISSUES ───────────────────────────────
 
   /**

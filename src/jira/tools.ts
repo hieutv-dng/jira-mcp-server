@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jiraClient, JiraClient } from "./client.js";
-import { formatIssueForAI, formatIssueListForAI } from "./formatter.js";
+import { formatIssueForAI, formatIssueListForAI, formatCurrentUser } from "./formatter.js";
 import { withErrorHandler, getChainHint } from "../shared/index.js";
 // ─────────────────────────────────────────────
 // registerJiraTools: đăng ký tất cả Jira tools
@@ -45,6 +45,25 @@ function buildUserClause(role: string, assigneeFilter: string): string {
 export function registerJiraTools(server: McpServer, client?: JiraClient) {
   // Use injected client or fallback to singleton (stdio mode)
   const jira = client || jiraClient;
+
+  // ── TOOL 0: Lấy thông tin user hiện tại ──────
+  server.tool(
+    "get_current_user",
+    "Lấy thông tin user Jira hiện tại (ứng với PAT đang dùng). " +
+    "Trả về username, display name, email, timezone. " +
+    "Dùng để: (1) verify PAT hợp lệ, (2) biết username để dùng trong JQL hoặc assigneeFilter, " +
+    "(3) xác nhận đúng account khi dùng multi-tenant.",
+    {},
+    withErrorHandler("get_current_user", async () => {
+      const user = await jira.getCurrentUser();
+      return {
+        content: [{
+          type: "text",
+          text: formatCurrentUser(user) + getChainHint("get_current_user"),
+        }],
+      };
+    })
+  );
 
   // ── TOOL 1: Lấy danh sách issues ─────────────
   server.tool(

@@ -205,6 +205,32 @@ function formatDate(isoString: string): string {
 }
 
 /**
+ * Format thông tin user hiện tại (endpoint /myself)
+ */
+export function formatCurrentUser(user: {
+  key: string;
+  name: string;
+  displayName: string;
+  emailAddress?: string;
+  active: boolean;
+  timeZone?: string;
+  locale?: string;
+}): string {
+  const lines = [
+    `# 👤 Current Jira User`,
+    ``,
+    `- **Username:** \`${user.name}\``,
+    `- **Display name:** ${user.displayName}`,
+  ];
+  if (user.emailAddress) lines.push(`- **Email:** ${user.emailAddress}`);
+  lines.push(`- **Key:** ${user.key}`);
+  lines.push(`- **Active:** ${user.active ? "✅" : "❌"}`);
+  if (user.timeZone) lines.push(`- **Timezone:** ${user.timeZone}`);
+  if (user.locale) lines.push(`- **Locale:** ${user.locale}`);
+  return lines.join("\n");
+}
+
+/**
  * Jira Markup → plain text đơn giản
  * Loại bỏ các ký tự markup phức tạp mà AI không cần
  */
