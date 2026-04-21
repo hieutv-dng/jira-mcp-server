@@ -336,7 +336,7 @@ MCP SDK reads này để prompt user confirmation trước execute. Note: `updat
 ```json
 {
   "name": "jira-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "build": "tsc",

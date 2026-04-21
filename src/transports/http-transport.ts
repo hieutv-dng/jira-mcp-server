@@ -71,7 +71,7 @@ function bearerAuth(req: Request, res: Response, next: NextFunction): void {
 function createPerRequestServer(client: JiraClient): McpServer {
   const server = new McpServer({
     name: "jira-mcp-server",
-    version: "1.0.0",
+    version: "1.1.0",
   });
   registerJiraTools(server, client);
   return server;

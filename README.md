@@ -4,7 +4,7 @@ MCP (Model Context Protocol) server tích hợp Jira cho Claude AI. Hỗ trợ C
 
 | Thông tin | Giá trị |
 |-----------|--------|
-| **Phiên bản** | v1.0.0 |
+| **Phiên bản** | v1.1.0 |
 | **Trạng thái** | Production-ready |
 | **Xác thực** | Personal Access Token (PAT) |
 | **Transports** | Stdio (Claude Desktop), HTTP (LangChain, remote) |

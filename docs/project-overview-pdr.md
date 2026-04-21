@@ -4,7 +4,7 @@
 
 **jira-mcp-server** là MCP (Model Context Protocol) server cung cấp công cụ Jira cho Claude AI assistants. Cho phép Claude tương tác trực tiếp với Jira Server/Data Center để quản lý issues, log work, comment, và transition issues.
 
-**Version:** v1.0.0
+**Version:** v1.1.0
 **Status:** Production-ready
 **Primary User:** Vietnamese dev teams sử dụng Jira Server/Data Center
 
