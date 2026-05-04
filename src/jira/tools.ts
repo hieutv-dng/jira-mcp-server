@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jiraClient, JiraClient } from "./client.js";
-import { formatIssueForAI, formatIssueListForAI, formatCurrentUser } from "./formatter.js";
+import { formatIssueForAI, formatIssueListForAI, formatCurrentUser, formatWorklogSummary } from "./formatter.js";
 import { withErrorHandler, getChainHint } from "../shared/index.js";
 // ─────────────────────────────────────────────
 // registerJiraTools: đăng ký tất cả Jira tools
@@ -239,7 +239,79 @@ export function registerJiraTools(server: McpServer, client?: JiraClient) {
     })
   );
 
-  // ── TOOL 4: Cập nhật issue (transition + comment) ───────
+  // ── TOOL 4: Truy vấn worklog ───────────────
+  server.tool(
+    "list_worklogs",
+    "Truy vấn tổng giờ đã logwork của 1 user trong khoảng thời gian, group theo issue. " +
+    "Mặc định: current user, tháng hiện tại. " +
+    "Use case: 'tháng này tôi log bao nhiêu giờ', 'user X log những task nào tuần qua'.",
+    {
+      username: z.string().optional()
+        .describe("Username Jira (không phải display name). Bỏ trống = current user."),
+      dateFrom: z.string().optional()
+        .describe("Ngày bắt đầu YYYY-MM-DD. Bỏ trống = ngày 1 tháng hiện tại."),
+      dateTo: z.string().optional()
+        .describe("Ngày kết thúc YYYY-MM-DD. Bỏ trống = hôm nay."),
+      projectKey: z.string().optional()
+        .describe("Filter theo project key, VD: 'VNPTAI'. Bỏ trống = tất cả."),
+    },
+    withErrorHandler("list_worklogs", async ({ username, dateFrom, dateTo, projectKey }) => {
+      // 1. Resolve defaults
+      const resolvedUser = username || (await jira.getCurrentUser()).name;
+      const today = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+      const monthStart = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
+      const from = dateFrom || monthStart;
+      const to = dateTo || todayStr;
+
+      // 2. Build JQL
+      const clauses = [
+        `worklogAuthor = "${resolvedUser}"`,
+        `worklogDate >= "${from}"`,
+        `worklogDate <= "${to}"`,
+      ];
+      if (projectKey) clauses.push(`project = "${projectKey}"`);
+      const jql = clauses.join(" AND ");
+
+      // 3. Search issues + fetch worklogs parallel
+      const MAX = 500;
+      const search = await jira.searchIssues(jql, MAX);
+      const issues = (search.issues || []) as Array<{ key: string; fields: { summary: string } }>;
+      const truncated = (search.total || 0) > MAX;
+
+      const worklogResults = await Promise.all(
+        issues.map((i) => jira.getIssueWorklogs(i.key))
+      );
+
+      // 4. Aggregate
+      const rows = issues
+        .map((issue, idx) => {
+          const entries = worklogResults[idx].worklogs || [];
+          const totalSec = entries
+            .filter((e) =>
+              e.author.name === resolvedUser &&
+              e.started.slice(0, 10) >= from &&
+              e.started.slice(0, 10) <= to
+            )
+            .reduce((sum, e) => sum + e.timeSpentSeconds, 0);
+          return { issueKey: issue.key, summary: issue.fields.summary, totalSeconds: totalSec };
+        })
+        .filter((r) => r.totalSeconds > 0);
+
+      const grandTotal = rows.reduce((s, r) => s + r.totalSeconds, 0);
+
+      return {
+        content: [{
+          type: "text",
+          text: formatWorklogSummary(rows, grandTotal, { username: resolvedUser, from, to, truncated })
+            + getChainHint("list_worklogs"),
+        }],
+      };
+    })
+  );
+
+  // ── TOOL 5: Cập nhật issue (transition + comment) ───────
   server.tool(
     "update_issue",
     "Cập nhật Jira issue: chuyển trạng thái, thêm comment, hoặc xem transitions khả dụng. " +

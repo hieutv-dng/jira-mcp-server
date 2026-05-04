@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MCP Server providing Jira integration for Claude AI. Targets Jira Server/Data Center (not Cloud) with PAT authentication. 6 tools: get_current_user, list_issues, get_issue_detail, log_work, update_issue, create_issue.
+MCP Server providing Jira integration for Claude AI. Targets Jira Server/Data Center (not Cloud) with PAT authentication. 7 tools: get_current_user, list_issues, get_issue_detail, log_work, list_worklogs, update_issue, create_issue.
 
 ## Build & Run Commands
 

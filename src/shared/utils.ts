@@ -67,6 +67,8 @@ export const TOOL_CHAINING: Record<string, string> = {
     "→ Tiếp: `log_work` để ghi nhận effort, hoặc `update_issue` để chuyển trạng thái / thêm comment.",
   log_work:
     "→ Tiếp: `update_issue` để chuyển trạng thái task.",
+  list_worklogs:
+    "→ Tiếp: `get_issue_detail` để xem chi tiết worklog của 1 issue, hoặc `log_work` nếu thiếu giờ.",
   update_issue:
     "→ Tiếp: Task đã hoàn tất! Hoặc `list_issues` để xem task tiếp theo.",
   create_issue:

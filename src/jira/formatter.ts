@@ -231,6 +231,49 @@ export function formatCurrentUser(user: {
 }
 
 /**
+ * Một dòng tổng hợp worklog cho 1 issue
+ */
+export interface WorklogRow {
+  issueKey: string;
+  summary: string;
+  totalSeconds: number;
+}
+
+/**
+ * Format bảng worklog summary aggregate theo issue
+ */
+export function formatWorklogSummary(
+  rows: WorklogRow[],
+  totalSeconds: number,
+  meta: { username: string; from: string; to: string; truncated?: boolean }
+): string {
+  const toHours = (sec: number) => (sec / 3600).toFixed(2) + "h";
+  const toDays = (sec: number) => (sec / 28800).toFixed(2); // 8h = 1d
+
+  if (rows.length === 0) {
+    return `📊 **Worklogs** — \`${meta.username}\` (${meta.from} → ${meta.to})\n\n` +
+           `_Không có worklog nào trong khoảng thời gian này._`;
+  }
+
+  const lines = [
+    `📊 **Worklogs** — \`${meta.username}\` (${meta.from} → ${meta.to})`,
+    "",
+    "| Issue | Summary | Hours |",
+    "|-------|---------|-------|",
+    ...rows.map((r) => `| ${r.issueKey} | ${r.summary} | ${toHours(r.totalSeconds)} |`),
+    "",
+    `🧮 **Total:** ${toHours(totalSeconds)} (${toDays(totalSeconds)} days @ 8h) · ${rows.length} issues`,
+  ];
+  if (meta.truncated) {
+    lines.push(
+      "",
+      `⚠️ Đã chạm giới hạn 500 issues — kết quả có thể chưa đầy đủ. Hãy thu hẹp date range hoặc thêm projectKey.`
+    );
+  }
+  return lines.join("\n");
+}
+
+/**
  * Jira Markup → plain text đơn giản
  * Loại bỏ các ký tự markup phức tạp mà AI không cần
  */

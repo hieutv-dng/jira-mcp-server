@@ -205,6 +205,25 @@ export class JiraClient {
     return res.data;
   }
 
+  /**
+   * Lấy toàn bộ worklog entries của 1 issue.
+   * Jira Server endpoint: GET /issue/{key}/worklog
+   */
+  async getIssueWorklogs(issueKey: string) {
+    const res = await this.http.get(`/issue/${issueKey}/worklog`);
+    return res.data as {
+      worklogs: Array<{
+        id: string;
+        author: { name: string; displayName: string; key: string };
+        started: string;
+        timeSpent: string;
+        timeSpentSeconds: number;
+        comment?: string;
+      }>;
+      total: number;
+    };
+  }
+
   // ─── TRANSITIONS (đổi status) ─────────────
 
   /**
