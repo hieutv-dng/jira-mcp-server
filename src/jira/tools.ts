@@ -311,14 +311,17 @@ export function registerJiraTools(server: McpServer, client?: JiraClient) {
     })
   );
 
-  // ── TOOL 5: Cập nhật issue (transition + comment) ───────
+  // ── TOOL 5: Cập nhật issue (assign + transition + comment) ───────
   server.tool(
     "update_issue",
-    "Cập nhật Jira issue: chuyển trạng thái, thêm comment, hoặc xem transitions khả dụng. " +
+    "Cập nhật Jira issue: assign/unassign user, chuyển trạng thái, thêm comment, " +
+    "hoặc xem transitions khả dụng. " +
     "Dùng dryRun=true để xem danh sách transitions mà không thay đổi gì. " +
+    "Truyền assignee để gán/gỡ người làm. " +
     "Truyền chỉ comment (không transitionName) để thêm ghi chú mà không đổi status. " +
     "Truyền transitionName để chuyển trạng thái (kèm comment, resolution nếu cần). " +
-    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi status hoặc thêm comment.",
+    "Có thể combine assignee + transitionName + comment trong cùng 1 call. " +
+    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi assignee, status hoặc thêm comment.",
     {
       issueKey: z.string().describe("Jira issue key, VD: 'PROJAI-123'"),
       dryRun: z.boolean().default(false)
@@ -329,8 +332,15 @@ export function registerJiraTools(server: McpServer, client?: JiraClient) {
         .describe("Resolution khi đóng task. VD: 'Done', 'Fixed'. Chỉ cần khi chuyển sang Done/Resolved."),
       comment: z.string().optional()
         .describe("Ghi chú kèm theo. Có thể dùng độc lập (không cần transitionName) hoặc kèm transition."),
+      assignee: z.string().optional()
+        .describe(
+          "Username muốn assign. " +
+          "'unassigned' = gỡ assignee (set null). " +
+          "Bỏ trống = không đổi assignee. " +
+          "VD: 'nghiath', 'hieutv'. Hỗ trợ fuzzy match."
+        ),
     },
-    withErrorHandler("update_issue", async ({ issueKey, dryRun, transitionName, comment, resolution }) => {
+    withErrorHandler("update_issue", async ({ issueKey, dryRun, transitionName, comment, resolution, assignee }) => {
       // Case 1: dryRun — chỉ list transitions
       if (dryRun) {
         const transitions = await jira.getTransitions(issueKey);
@@ -343,41 +353,44 @@ export function registerJiraTools(server: McpServer, client?: JiraClient) {
         };
       }
 
-      // Case 2: chỉ comment (không transition)
-      if (!transitionName && comment) {
+      // Case 2: không có gì để làm
+      if (!transitionName && !comment && !assignee) {
+        return {
+          content: [{
+            type: "text",
+            text: `⚠️ Không có thay đổi — truyền assignee để gán/gỡ user, transitionName để đổi status, comment để thêm ghi chú, hoặc dryRun=true để xem transitions.`,
+          }],
+        };
+      }
+
+      // Case 3: combine flow — assignee → transition → comment
+      const reportLines: string[] = [`✅ Đã cập nhật thành công!`, `📌 Issue: ${issueKey}`];
+
+      // Step A: Assignee (assign trước để pass workflow guards của transition)
+      if (assignee) {
+        if (assignee.toLowerCase() === "unassigned") {
+          await jira.updateAssignee(issueKey, null);
+          reportLines.push(`👤 Assignee: ❌ Đã gỡ assignee`);
+        } else {
+          await jira.updateAssignee(issueKey, assignee);
+          reportLines.push(`👤 Assignee: ${assignee} (đã gán)`);
+        }
+      }
+
+      // Step B: Transition (kèm comment + resolution nếu có)
+      if (transitionName) {
+        await jira.transitionIssue(issueKey, transitionName, { resolution, comment });
+        reportLines.push(`🔄 Trạng thái mới: ${transitionName}`);
+        if (resolution) reportLines.push(`✔️ Resolution: ${resolution}`);
+        if (comment) reportLines.push(`💬 Comment: "${comment}"`);
+      } else if (comment) {
+        // Step C: Comment standalone (chỉ khi không có transition để tránh duplicate)
         await jira.addComment(issueKey, comment);
-        return {
-          content: [{
-            type: "text",
-            text: `✅ Đã thêm comment vào ${issueKey}:\n\n> ${comment}` + getChainHint("update_issue"),
-          }],
-        };
+        reportLines.push(`💬 Comment: "${comment}"`);
       }
-
-      // Case 3: không có gì để làm
-      if (!transitionName && !comment) {
-        return {
-          content: [{
-            type: "text",
-            text: `⚠️ Không có thay đổi — truyền transitionName để đổi status, comment để thêm ghi chú, hoặc dryRun=true để xem transitions.`,
-          }],
-        };
-      }
-
-      // Case 4: transition (± comment, ± resolution)
-      // transitionIssue() gọi getTransitions() internally — không cần gọi trước
-      await jira.transitionIssue(issueKey, transitionName!, { resolution, comment });
-
-      const lines = [
-        `✅ Đã cập nhật thành công!`,
-        `📌 Issue: ${issueKey}`,
-        `🔄 Trạng thái mới: ${transitionName}`,
-      ];
-      if (resolution) lines.push(`✔️ Resolution: ${resolution}`);
-      if (comment) lines.push(`💬 Comment: "${comment}"`);
 
       return {
-        content: [{ type: "text", text: lines.join("\n") + getChainHint("update_issue") }],
+        content: [{ type: "text", text: reportLines.join("\n") + getChainHint("update_issue") }],
       };
     })
   );

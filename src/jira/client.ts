@@ -286,6 +286,31 @@ export class JiraClient {
     return { success: true, transitionedTo: transitionName };
   }
 
+  /**
+   * Cập nhật assignee của issue.
+   * @param issueKey - VD: "PROJAI-123"
+   * @param username - Username để assign. null = unassign (clear).
+   *                   String hỗ trợ fuzzy match qua resolveAssignee().
+   */
+  async updateAssignee(issueKey: string, username: string | null): Promise<void> {
+    let assigneeField: { name: string } | null = null;
+
+    if (username !== null) {
+      const projectKey = issueKey.split("-")[0];
+      if (!projectKey) {
+        throw new Error(
+          `Issue key không hợp lệ: "${issueKey}". Định dạng đúng: PROJECT-NUMBER (VD: PROJAI-123)`
+        );
+      }
+      const resolvedName = await this.resolveAssignee(projectKey, username);
+      assigneeField = { name: resolvedName };
+    }
+
+    await this.http.put(`/issue/${issueKey}`, {
+      fields: { assignee: assigneeField },
+    });
+  }
+
   // ─── COMMENTS ─────────────────────────────
 
   /**

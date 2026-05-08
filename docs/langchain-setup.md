@@ -65,5 +65,5 @@ print(result)
 | `list_issues` | List Jira issues with filters |
 | `get_issue_detail` | Get full issue details |
 | `log_work` | Log work time |
-| `update_issue` | Update issue status/comment |
+| `update_issue` | Assign/unassign user, update issue status/comment |
 | `create_issue` | Create new issue |

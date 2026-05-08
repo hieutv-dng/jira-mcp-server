@@ -165,7 +165,7 @@ this.client.interceptors.response.use(
 | `list_issues` | `{project?, assigneeFilter?, roleFilter?, statusFilter?, maxResults?}` | searchIssues + filters | No confirm |
 | `get_issue_detail` | `{key}` | getIssue + drift detection | Drift warning |
 | `log_work` | `{key, hours, date?, comment?}` | addWorklog | **CONFIRM** |
-| `update_issue` | `{key, status?, comment?, dryRun?}` | getTransitions → transitionIssue + addComment | **CONFIRM** |
+| `update_issue` | `{key, assignee?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → transitionIssue + addComment (combine flow) | **CONFIRM** |
 | `create_issue` | `{projectKey, issueType, summary, description, priority, labels, spda?, congDoan?, dueDate?, assignee?, epicKey?, dryRun?}` | createIssue + metadata + fuzzy resolve | **CONFIRM** |
 
 **Old Tools (REMOVED/RENAMED):**

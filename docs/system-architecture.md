@@ -120,7 +120,7 @@ User Request
 | `list_issues` | JQL + filters | searchIssues() + filter | Issue list table |
 | `get_issue_detail` | Issue key | getIssue() + drift check | Detail markdown + warning |
 | `log_work` | key, hours, date | addWorklog() | Confirmation message |
-| `update_issue` | key, status, comment | getTransitions() → transitionIssue() + addComment() | New status message |
+| `update_issue` | key, assignee?, transitionName?, comment?, resolution? | updateAssignee → transitionIssue → addComment (combine) | Combined update report |
 | `create_issue` | project, summary, fields | createIssue() + fuzzy resolve custom fields | New issue key + link |
 
 **Safety Layer:**

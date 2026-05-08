@@ -61,7 +61,7 @@ const canTransition = true;
 'list_issues'           // list issues with filters
 'get_issue_detail'      // get single issue + drift detection
 'log_work'              // record work hours
-'update_issue'          // transition status + add comment (merged old tools)
+'update_issue'          // assign/unassign + transition + comment (combine flow)
 'create_issue'          // create new issue with custom field resolve
 
 // Descriptions: Vietnamese + clear English terms
