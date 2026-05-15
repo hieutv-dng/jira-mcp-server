@@ -5,3 +5,6 @@ build/
 dist/
 .agent/
 !.env.example
+
+# Local MCP client config (chứa PAT thật)
+.mcp.json
