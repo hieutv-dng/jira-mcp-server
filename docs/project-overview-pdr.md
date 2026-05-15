@@ -4,7 +4,7 @@
 
 **jira-mcp-server** là MCP (Model Context Protocol) server cung cấp công cụ Jira cho Claude AI assistants. Cho phép Claude tương tác trực tiếp với Jira Server/Data Center để quản lý issues, log work, comment, và transition issues.
 
-**Version:** v1.1.0
+**Version:** v1.2.0
 **Status:** Production-ready
 **Primary User:** Vietnamese dev teams sử dụng Jira Server/Data Center
 
@@ -34,7 +34,7 @@
 Claude Desktop / Claude Code
         ↓ (MCP protocol via stdio)
 jira-mcp-server Server (Node.js/TypeScript)
-        ├── 6 Tools: get_current_user, list_issues, get_issue_detail, log_work, update_issue, create_issue
+        ├── 8 Tools: get_current_user, list_issues, get_issue_detail, log_work, list_worklogs, delete_worklog, update_issue, create_issue
         ├── JiraClient: Jira REST API v2 (axios + PAT auth) + fuzzy matching
         ├── Formatter: Markdown output for AI comprehension
         └── Error Handler: Safety validation + confirmation flow
@@ -73,12 +73,14 @@ Jira Server/Data Center (REST API v2)
 
 ### Acceptance Criteria
 
-- ✅ All 6 core tools callable from Claude Desktop/Code
+- ✅ All 8 core tools callable from Claude Desktop/Code
   - get_current_user (verify PAT, fetch username)
   - list_issues (search + filter)
   - get_issue_detail (view issue + drift detection)
   - log_work (record hours)
-  - update_issue (transition + comment)
+  - list_worklogs (timesheet summary or detail with worklogId)
+  - delete_worklog (batch delete with dryRun preview)
+  - update_issue (transition + comment + assignee)
   - create_issue (with fuzzy field matching)
 - ✅ Jira responses formatted as markdown (readable for AI)
 - ✅ Write operations require user confirmation (CLI prompts)
@@ -149,7 +151,7 @@ Safety configuration defining which tools require user confirmation:
 
 | Metric | Target | Measurement |
 |--------|--------|---|
-| Tool Availability | 100% | All 6 tools callable, no timeout errors |
+| Tool Availability | 100% | All 8 tools callable, no timeout errors |
 | Response Time (API) | <3s (excl. Jira) | Latency measured via logs |
 | User Confirmation | 100% on writes | All write operations prompt user |
 | Error Recovery | 95%+ | Graceful errors, clear messages |

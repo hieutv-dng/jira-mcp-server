@@ -282,15 +282,17 @@ User cannot login with SSO...
 | `withErrorHandler(handler)` | Try-catch wrapper for all tool handlers |
 | `getChainHint(toolName)` | Return next tool suggestion |
 
-**TOOL_CHAINING Map (UPDATED):**
+**TOOL_CHAINING Map (UPDATED v1.2.0):**
 
 ```typescript
 const TOOL_CHAINING = {
   'get_current_user': 'list_issues (assigneeFilter defaults to currentUser())',
   'list_issues': 'get_issue_detail or create_issue',
-  'get_issue_detail': 'log_work or update_issue',
-  'log_work': 'update_issue',
-  'update_issue': 'list_issues',
+  'get_issue_detail': 'log_work or list_worklogs or update_issue',
+  'log_work': 'list_worklogs or update_issue',
+  'list_worklogs': 'delete_worklog or get_issue_detail',
+  'delete_worklog': 'list_worklogs or list_issues',
+  'update_issue': 'list_issues or list_worklogs',
   'create_issue': 'get_issue_detail'
 };
 ```
@@ -314,7 +316,7 @@ export * from './utils.ts';
 
 ## Configuration Files
 
-### **mcp-config.json** (UPDATED)
+### **mcp-config.json** (UPDATED v1.2.0)
 Safety configuration:
 
 ```json
@@ -330,7 +332,7 @@ Safety configuration:
 }
 ```
 
-MCP SDK reads này để prompt user confirmation trước execute. Note: `update_issue` merged old `update_issue_status` + `add_comment`.
+MCP SDK reads này để prompt user confirmation trước execute. Note: `update_issue` merged old `update_issue_status` + `add_comment`. `delete_worklog` requires dryRun preview before real delete.
 
 ### **tsconfig.json**
 ```json
@@ -349,13 +351,13 @@ MCP SDK reads này để prompt user confirmation trước execute. Note: `updat
 ```json
 {
   "name": "jira-mcp-server",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "inspect": "mcp-inspector ... (mcp inspector command)"
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts"
   }
 }
 ```

@@ -63,7 +63,9 @@ print(result)
 |------|-------------|
 | `get_current_user` | Fetch current user info (verify PAT, get username) |
 | `list_issues` | List Jira issues with filters |
-| `get_issue_detail` | Get full issue details |
-| `log_work` | Log work time |
+| `get_issue_detail` | Get full issue details with drift detection |
+| `log_work` | Log work time on an issue |
+| `list_worklogs` | List worklog entries (timesheet summary or detail with worklogId) |
+| `delete_worklog` | Delete worklog entries (batch, dryRun preview required first) |
 | `update_issue` | Assign/unassign user, update issue status/comment |
-| `create_issue` | Create new issue |
+| `create_issue` | Create new issue with custom fields |

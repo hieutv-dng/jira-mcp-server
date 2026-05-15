@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-15
+
+### Added
+- `delete_worklog` tool — batch delete work logs with dryRun preview, adjustEstimate=auto for automatic recalculation
+- `list_worklogs` tool — aggregate worklog summary or detailed list with worklogId per entry
+- `JiraClient.deleteWorklog()` — REST API wrapper for DELETE /rest/api/2/issue/{key}/worklog/{id}
+- `JiraClient.getIssueWorklogs()` — Fetch all work logs for an issue
+- `WorklogEntry` interface — Type definition for worklog structure
+- `formatWorklogDetail()` formatter — Markdown detail output for worklog entries
+- Tools directory refactored: `src/jira/tools.ts` → `src/jira/tools/` (5 focused files: index.ts, user-tools.ts, issue-tools.ts, issue-drift-warning.ts, create-issue-tool.ts, worklog-tools.ts)
+
+### Changed
+- Tools now registered via barrel export in `src/jira/tools/index.ts` for better maintainability
+- `list_worklogs` response format expanded to include worklogId per entry when detail=true
+- Refactored `tools.ts` into modular files to reduce cognitive load
+
 ## [1.1.0] - 2026-04-21
 
 ### Added

@@ -380,7 +380,7 @@ User sees drift warning, can call log_work or updateIssueStatus next
 - Invalid PAT → 401 API response → `AUTHENTICATION_FAILED` error
 - PAT with insufficient permissions → 403 API response → `PERMISSION_DENIED` error
 
-## Tool Chaining Map (UPDATED)
+## Tool Chaining Map (UPDATED v1.2.0)
 
 ```
 Entry point:
@@ -391,28 +391,39 @@ Entry point:
     ├─→ get_issue_detail (see details)
     │     ↓
     │     ├─→ log_work (record hours)
+    │     ├─→ list_worklogs (view worklog summary or detail)
     │     └─→ update_issue (change status + comment)
     │
     └─→ create_issue (report new issue)
          ↓
          └─→ get_issue_detail
 
+Worklog Operations:
+  log_work → list_worklogs (verify recorded hours)
+    ↓
+  delete_worklog (if dryRun approved)
+    ↓
+  list_worklogs (verify deletion)
+
 Workflow:
   1. get_current_user → (verify PAT + fetch username)
   2. list_issues → (see what's open)
   3. get_issue_detail → (pick one issue)
-  4. log_work → (record effort)
-  5. update_issue → (add comment + move to Done)
+  4. log_work or list_worklogs → (record effort or view timesheet)
+  5. delete_worklog (optional) → (remove incorrect entries)
+  6. update_issue → (add comment + move to Done)
 ```
 
-**chainHint Values (UPDATED):**
+**chainHint Values (UPDATED v1.2.0):**
 ```typescript
 {
   'get_current_user': 'list_issues (assigneeFilter defaults to currentUser())',
   'list_issues': 'get_issue_detail or create_issue',
-  'get_issue_detail': 'log_work or update_issue',
-  'log_work': 'update_issue',
-  'update_issue': 'list_issues',
+  'get_issue_detail': 'log_work or list_worklogs or update_issue',
+  'log_work': 'list_worklogs or update_issue',
+  'list_worklogs': 'delete_worklog or get_issue_detail',
+  'delete_worklog': 'list_worklogs or list_issues',
+  'update_issue': 'list_issues or list_worklogs',
   'create_issue': 'get_issue_detail'
 }
 ```

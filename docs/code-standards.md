@@ -56,11 +56,13 @@ const canTransition = true;
 #### Tool Names & Descriptions (UPDATED)
 
 ```typescript
-// Tool names: snake_case (MCP convention) — 6 tools total
+// Tool names: snake_case (MCP convention) — 8 tools total
 'get_current_user'      // fetch current user info from PAT (GET /myself)
 'list_issues'           // list issues with filters
 'get_issue_detail'      // get single issue + drift detection
 'log_work'              // record work hours
+'list_worklogs'         // list worklog entries (timesheet summary or detail with worklogId)
+'delete_worklog'        // delete worklog entries (batch, dryRun preview required first)
 'update_issue'          // assign/unassign + transition + comment (combine flow)
 'create_issue'          // create new issue with custom field resolve
 
@@ -130,7 +132,13 @@ src/
 ├── index.ts              — Entry point (connect server + transport)
 ├── jira/
 │   ├── client.ts         — JiraClient class + API methods + fuzzy matching
-│   ├── tools.ts          — Tool registration + handlers (6 tools)
+│   ├── tools/            — Tool registration + handlers split by concern (8 tools)
+│   │   ├── index.ts      — Barrel export, registerJiraTools()
+│   │   ├── user-tools.ts — get_current_user
+│   │   ├── issue-tools.ts — list_issues, get_issue_detail, update_issue
+│   │   ├── issue-drift-warning.ts — Drift detection helper
+│   │   ├── create-issue-tool.ts — create_issue (custom schema)
+│   │   └── worklog-tools.ts — log_work, list_worklogs, delete_worklog
 │   └── formatter.ts      — Output formatting for AI
 └── shared/
     ├── index.ts          — Re-exports
@@ -512,13 +520,15 @@ const storyPoints = issue.customfield_10029 ?? 0;
 ### CONSTANT_CASE for Config
 
 ```typescript
-// shared/utils.ts (UPDATED)
+// shared/utils.ts (UPDATED v1.2.0)
 export const TOOL_CHAINING = {
   'get_current_user': 'list_issues',
   'list_issues': 'get_issue_detail or create_issue',
-  'get_issue_detail': 'log_work or update_issue',
-  'log_work': 'update_issue',
-  'update_issue': 'list_issues',
+  'get_issue_detail': 'log_work or list_worklogs or update_issue',
+  'log_work': 'list_worklogs or update_issue',
+  'list_worklogs': 'delete_worklog or get_issue_detail',
+  'delete_worklog': 'list_worklogs or list_issues',
+  'update_issue': 'list_issues or list_worklogs',
   'create_issue': 'get_issue_detail'
 };
 
