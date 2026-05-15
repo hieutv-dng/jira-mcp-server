@@ -2,11 +2,10 @@
 
 ## Overview
 
-jira-mcp-server là Node.js/TypeScript project (~1700 LOC) cung cấp MCP server cho Jira integration. Cấu trúc gọn gàng với 6 file chính: entry point, Jira client, tool definitions, formatter, utilities.
+jira-mcp-server là Node.js/TypeScript project (~2000 LOC) cung cấp MCP server cho Jira integration. Tools split theo concern trong `src/jira/tools/` directory.
 
-**Total LOC:** ~1700
-**Files:** 8 source files + 2 config files
-**Language:** TypeScript (ES2022, strict mode)
+**Total LOC:** ~2000
+**Language:** TypeScript (ES2022, strict mode, NodeNext)
 **Build:** tsc → dist/
 **Transport:** stdio (default) | HTTP (via HTTP_PORT env var)
 
@@ -14,23 +13,29 @@ jira-mcp-server là Node.js/TypeScript project (~1700 LOC) cung cấp MCP server
 
 ```
 src/
-├── index.ts (25 LOC)
+├── index.ts (37 LOC)
 ├── transports/
-│   ├── stdio-transport.ts (12 LOC) — Stdio transport (default)
-│   └── http-transport.ts (85 LOC) — HTTP transport (Express + Bearer auth)
+│   ├── stdio-transport.ts — Stdio transport (default)
+│   └── http-transport.ts — HTTP transport (Express + Bearer auth)
 ├── jira/
-│   ├── client.ts (727 LOC)
-│   ├── tools.ts (560 LOC)
-│   └── formatter.ts (212 LOC)
+│   ├── client.ts (856 LOC)
+│   ├── tools/                            # Split theo concern
+│   │   ├── index.ts (25 LOC)             # Barrel — registerJiraTools()
+│   │   ├── user-tools.ts (29 LOC)        # get_current_user
+│   │   ├── issue-tools.ts (258 LOC)      # list_issues, get_issue_detail, update_issue
+│   │   ├── issue-drift-warning.ts (79)   # Heuristic drift warning helper
+│   │   ├── create-issue-tool.ts (204)    # create_issue (schema lớn — tách riêng)
+│   │   └── worklog-tools.ts (227 LOC)    # log_work, list_worklogs, delete_worklog
+│   └── formatter.ts (329 LOC)
 └── shared/
-    ├── index.ts (1 LOC)
-    └── utils.ts (80 LOC)
+    ├── index.ts (re-export)
+    └── utils.ts (87 LOC)
 
 Config:
 ├── mcp-config.json — Safety config
 ├── tsconfig.json — TypeScript config
 ├── package.json — Dependencies
-└── start-ngrok-remote.sh (157 LOC) — Remote deployment (legacy)
+└── start-ngrok-remote.sh — Remote deployment (legacy)
 ```
 
 ## File-by-File Breakdown
@@ -154,19 +159,26 @@ this.client.interceptors.response.use(
 );
 ```
 
-### 3. **src/jira/tools.ts** (560 LOC)
-**Purpose:** MCP tool registration — định nghĩa 6 tools, schema validation, handlers, fuzzy matching.
+### 3. **src/jira/tools/** (split theo concern)
+**Purpose:** MCP tool registration — 8 tools chia theo file: user, issue, create-issue, worklog. Barrel `index.ts` gom lại bằng `registerJiraTools()`.
 
-**Tools Registered (6 total):**
+**Tools Registered (8 total):**
 
-| Tool | Input Schema | Handler | Safety |
-|---|---|---|---|
-| `get_current_user` | `{}` (no args) | getCurrentUser() via `/myself` | No confirm |
-| `list_issues` | `{project?, assigneeFilter?, roleFilter?, statusFilter?, maxResults?}` | searchIssues + filters | No confirm |
-| `get_issue_detail` | `{key}` | getIssue + drift detection | Drift warning |
-| `log_work` | `{key, hours, date?, comment?}` | addWorklog | **CONFIRM** |
-| `update_issue` | `{key, assignee?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → transitionIssue + addComment (combine flow) | **CONFIRM** |
-| `create_issue` | `{projectKey, issueType, summary, description, priority, labels, spda?, congDoan?, dueDate?, assignee?, epicKey?, dryRun?}` | createIssue + metadata + fuzzy resolve | **CONFIRM** |
+| Tool | File | Input Schema | Handler | Safety |
+|---|---|---|---|---|
+| `get_current_user` | user-tools.ts | `{}` (no args) | getCurrentUser() via `/myself` | No confirm |
+| `list_issues` | issue-tools.ts | `{project?, assigneeFilter?, roleFilter?, statusFilter?, maxResults?}` | searchIssues + filters | No confirm |
+| `get_issue_detail` | issue-tools.ts | `{key}` | getIssue + drift detection | Drift warning |
+| `update_issue` | issue-tools.ts | `{key, assignee?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → transitionIssue + addComment (combine flow) | **CONFIRM** |
+| `create_issue` | create-issue-tool.ts | `{projectKey, issueType, summary, description, priority, labels, spda?, congDoan?, dueDate?, assignee?, epicKey?, dryRun?}` | createIssue + metadata + fuzzy resolve | **CONFIRM** |
+| `log_work` | worklog-tools.ts | `{key, timeSpent, comment, startedAt}` | addWorklog | **CONFIRM** |
+| `list_worklogs` | worklog-tools.ts | `{username?, dateFrom?, dateTo?, projectKey?, detail?}` | searchIssues + getIssueWorklogs (aggregate hoặc per-entry) | No confirm |
+| `delete_worklog` | worklog-tools.ts | `{issueKey, worklogIds: string[], dryRun?}` | batch DELETE best-effort, dryRun preview | **CONFIRM + dryRun first** |
+
+**Refactor notes (v1.2):**
+- `src/jira/tools.ts` (single file, 663 LOC) → split sang `src/jira/tools/` (5 file + 1 helper, ≤270 LOC mỗi file)
+- `src/index.ts:13` import đổi `./jira/tools.js` → `./jira/tools/index.js` (NodeNext ESM không hỗ trợ directory imports)
+- `buildQuickDriftWarning` tách sang `issue-drift-warning.ts` để giữ `issue-tools.ts` ≤ 270 dòng
 
 **Old Tools (REMOVED/RENAMED):**
 - `list_my_open_issues` → `list_issues` (expanded with filters)
@@ -311,7 +323,8 @@ Safety configuration:
     "requireConfirmation": [
       "log_work",
       "update_issue",
-      "create_issue"
+      "create_issue",
+      "delete_worklog"
     ]
   }
 }
@@ -439,16 +452,21 @@ return {
 ```
 index.ts
 ├── @modelcontextprotocol/sdk
-├── ./jira/tools.ts
-│   ├── zod (validation)
-│   ├── ./jira/client.ts
-│   │   ├── axios (HTTP)
-│   │   └── dotenv (env)
-│   ├── ./jira/formatter.ts
-│   │   └── (no external deps)
-│   └── ./shared/utils.ts
-│       └── (no external deps)
-└── (stdio transport)
+├── ./jira/tools/index.ts                # barrel
+│   ├── ./jira/tools/user-tools.ts
+│   ├── ./jira/tools/issue-tools.ts
+│   │   └── ./jira/tools/issue-drift-warning.ts
+│   ├── ./jira/tools/create-issue-tool.ts
+│   ├── ./jira/tools/worklog-tools.ts
+│   │   ├── zod (validation)
+│   │   ├── ./jira/client.ts
+│   │   │   ├── axios (HTTP)
+│   │   │   └── dotenv (env)
+│   │   ├── ./jira/formatter.ts
+│   │   │   └── (no external deps)
+│   │   └── ./shared/utils.ts
+│   │       └── (no external deps)
+└── (stdio transport / http transport)
 ```
 
 ## Code Metrics
@@ -558,6 +576,13 @@ server.setRequestHandler(Tool, async (req: ToolRequest) => {
   - Drift detection heuristic (not 100% accurate)
   - Custom field support: hardcoded fields (spda, congDoan) + fallback resolution
 - **Recent Changes (v1.2):**
+  - Added `delete_worklog` tool (batch + dryRun + best-effort) — xoá worklog đã log nhầm
+  - Added `list_worklogs.detail` param → flatten per-entry với worklogId
+  - Added `formatWorklogDetail()` + `WorklogEntry` interface in formatter
+  - Refactored `src/jira/tools.ts` → `src/jira/tools/` directory (5 file ≤ 270 LOC mỗi file)
+  - Added `JiraClient.deleteWorklog()` method (DELETE /worklog/{id}, adjustEstimate=auto)
+  - Updated `TOOL_CHAINING` cho `list_worklogs` + `delete_worklog`
+- **Previous changes (v1.1):**
   - Added `get_current_user` tool (GET /myself) — verify PAT, fetch username for JQL
   - Added `duedate`, `reporter`, `resolution` fields to search/formatters
   - Removed manage_jira_pat (multi-tenant HTTP headers auth)

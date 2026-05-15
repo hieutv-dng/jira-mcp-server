@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MCP Server providing Jira integration for Claude AI. Targets Jira Server/Data Center (not Cloud) with PAT authentication. 7 tools: get_current_user, list_issues, get_issue_detail, log_work, list_worklogs, update_issue, create_issue.
+MCP Server providing Jira integration for Claude AI. Targets Jira Server/Data Center (not Cloud) with PAT authentication. 8 tools: get_current_user, list_issues, get_issue_detail, log_work, list_worklogs, delete_worklog, update_issue, create_issue.
 
 ## Build & Run Commands
 
@@ -20,19 +20,19 @@ npm run inspect    # MCP Inspector for testing tools
 **Entry:** `src/index.ts` → McpServer + StdioServerTransport
 
 **Core modules:**
-- `src/jira/tools.ts` — Tool registration, Zod schemas, request handlers
+- `src/jira/tools/` — Tool registration split theo concern: `index.ts` barrel, `user-tools.ts`, `issue-tools.ts` (+ `issue-drift-warning.ts` helper), `create-issue-tool.ts`, `worklog-tools.ts`
 - `src/jira/client.ts` — JiraClient class wrapping Axios for REST API
 - `src/jira/formatter.ts` — Markdown output formatting for AI consumption
 - `src/shared/utils.ts` — Error handling wrapper, tool chaining hints
 
-**Data flow:** Claude → MCP stdio → tools.ts handler → JiraClient API call → formatter → Markdown response
+**Data flow:** Claude → MCP stdio → tools/* handler → JiraClient API call → formatter → Markdown response
 
 ## Key Patterns
 
 - **Error handling:** All tool handlers wrapped with `withErrorHandler()` from utils.ts
 - **Input validation:** Zod schemas for every tool input
 - **Tool chaining:** `TOOL_CHAINING` map in utils.ts suggests next action
-- **Write safety:** log_work, update_issue, create_issue require user confirmation via MCP annotations
+- **Write safety:** log_work, update_issue, create_issue, delete_worklog require user confirmation; delete_worklog further requires dryRun preview before real delete
 
 ## Environment
 
@@ -46,8 +46,8 @@ JIRA_DEFAULT_PROJECT=XYZ  # Optional
 ## Adding New Tools
 
 1. Add API method in `src/jira/client.ts`
-2. Create Zod schema in `src/jira/tools.ts`
-3. Register handler in `registerJiraTools()` function
+2. Create Zod schema in `src/jira/tools/{group}-tools.ts` (user/issue/worklog) hoặc tạo file riêng nếu schema lớn (xem `create-issue-tool.ts`)
+3. Register handler — export `register{Group}Tools()` và gọi từ `src/jira/tools/index.ts`
 4. Add formatter in `src/jira/formatter.ts` if needed
 5. Update `TOOL_CHAINING` in `src/shared/utils.ts`
 6. Test with `npm run inspect`

@@ -68,11 +68,15 @@ export const TOOL_CHAINING: Record<string, string> = {
   log_work:
     "→ Tiếp: `update_issue` để chuyển trạng thái task.",
   list_worklogs:
-    "→ Tiếp: `get_issue_detail` để xem chi tiết worklog của 1 issue, hoặc `log_work` nếu thiếu giờ.",
+    "→ Tiếp: `list_worklogs` với `detail=true` để xem worklogId, " +
+    "hoặc `get_issue_detail` xem chi tiết 1 issue, `log_work` nếu thiếu giờ, " +
+    "`delete_worklog` nếu cần xoá log nhầm.",
   update_issue:
     "→ Tiếp: Task đã hoàn tất! Hoặc `list_issues` để xem task tiếp theo.",
   create_issue:
     "→ Tiếp: `get_issue_detail` để xem issue vừa tạo.",
+  delete_worklog:
+    "→ Tiếp: `list_worklogs` để verify đã xoá, hoặc `log_work` log lại đúng.",
 };
 
 /**

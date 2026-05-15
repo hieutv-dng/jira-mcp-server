@@ -10,13 +10,13 @@ const projectRoot = resolve(__dirname, "..");
 config({ path: resolve(projectRoot, ".env") });
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerJiraTools } from "./jira/tools.js";
+import { registerJiraTools } from "./jira/tools/index.js";
 import { startStdioTransport } from "./transports/stdio-transport.js";
 import { startHttpTransport } from "./transports/http-transport.js";
 
 const server = new McpServer({
   name: "jira-mcp-server",
-  version: "1.1.0",
+  version: "1.2.0",
 });
 
 registerJiraTools(server);

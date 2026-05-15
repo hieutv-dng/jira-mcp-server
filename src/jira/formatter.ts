@@ -273,6 +273,45 @@ export function formatWorklogSummary(
   return lines.join("\n");
 }
 
+// ─────────────────────────────────────────────
+// Worklog Detail — flatten từng entry với worklogId
+// (dùng cho list_worklogs detail=true và preview của delete_worklog)
+// ─────────────────────────────────────────────
+
+export interface WorklogEntry {
+  id: string;
+  issueKey: string;
+  issueSummary: string;
+  date: string;        // YYYY-MM-DD
+  hours: number;       // seconds / 3600, làm tròn 2 chữ số
+  comment?: string;
+}
+
+export function formatWorklogDetail(
+  entries: WorklogEntry[],
+  meta: { username: string; from: string; to: string; truncated?: boolean }
+): string {
+  if (entries.length === 0) {
+    return `📊 **Worklog Detail** — \`${meta.username}\` (${meta.from} → ${meta.to})\n\n` +
+           `_Không có worklog nào._`;
+  }
+  const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+  const total = sorted.reduce((s, e) => s + e.hours, 0);
+  const lines = [
+    `📊 **Worklog Detail** — \`${meta.username}\` (${meta.from} → ${meta.to})`,
+    "",
+    "| WorklogID | Issue | Date | Hours | Comment |",
+    "|-----------|-------|------|-------|---------|",
+    ...sorted.map(e =>
+      `| \`${e.id}\` | ${e.issueKey} | ${e.date} | ${e.hours}h | ${(e.comment || "").slice(0, 80)} |`
+    ),
+    "",
+    `**Tổng:** ${total.toFixed(2)}h trên ${sorted.length} entries`,
+  ];
+  if (meta.truncated) lines.push("", "⚠️ _Kết quả bị truncate (>500 issues)._");
+  return lines.join("\n");
+}
+
 /**
  * Jira Markup → plain text đơn giản
  * Loại bỏ các ký tự markup phức tạp mà AI không cần

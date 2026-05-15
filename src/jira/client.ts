@@ -224,6 +224,19 @@ export class JiraClient {
     };
   }
 
+  /**
+   * Xoá 1 worklog entry. Jira tự cộng thời gian đã xoá vào
+   * remaining estimate (adjustEstimate=auto, default behavior).
+   *
+   * @throws 403 — không có quyền (worklog của user khác và không phải admin)
+   * @throws 404 — worklogId không tồn tại trên issue đó
+   */
+  async deleteWorklog(issueKey: string, worklogId: string): Promise<void> {
+    await this.http.delete(`/issue/${issueKey}/worklog/${worklogId}`, {
+      params: { adjustEstimate: "auto" },
+    });
+  }
+
   // ─── TRANSITIONS (đổi status) ─────────────
 
   /**

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
-import { registerJiraTools } from "../jira/tools.js";
+import { registerJiraTools } from "../jira/tools/index.js";
 import { createJiraClient, JiraClient } from "../jira/client.js";
 
 /**
@@ -71,7 +71,7 @@ function bearerAuth(req: Request, res: Response, next: NextFunction): void {
 function createPerRequestServer(client: JiraClient): McpServer {
   const server = new McpServer({
     name: "jira-mcp-server",
-    version: "1.1.0",
+    version: "1.2.0",
   });
   registerJiraTools(server, client);
   return server;

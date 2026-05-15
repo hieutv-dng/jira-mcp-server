@@ -12,13 +12,19 @@
 │ jira-mcp-server Server (Node.js/TypeScript)          │
 ├─────────────────────────────────────────────────────┤
 │ ┌─────────────────┐  ┌──────────────────────────┐   │
-│ │ MCP Server      │  │ Tool Handlers (6 tools)  │   │
-│ │ - connect       │  │ - get_current_user       │   │
-│ │ - resources     │  │ - list_issues            │   │
-│ │ - tools         │  │ - get_issue_detail       │   │
-│ │ - prompts       │  │ - log_work               │   │
-│ │                 │  │ - update_issue           │   │
-│ │                 │  │ - create_issue           │   │
+│ │ MCP Server      │  │ Tool Handlers (8 tools)  │   │
+│ │ - connect       │  │ user-tools.ts:           │   │
+│ │ - resources     │  │   • get_current_user     │   │
+│ │ - tools         │  │ issue-tools.ts:          │   │
+│ │ - prompts       │  │   • list_issues          │   │
+│ │                 │  │   • get_issue_detail     │   │
+│ │                 │  │   • update_issue         │   │
+│ │                 │  │ create-issue-tool.ts:    │   │
+│ │                 │  │   • create_issue         │   │
+│ │                 │  │ worklog-tools.ts:        │   │
+│ │                 │  │   • log_work             │   │
+│ │                 │  │   • list_worklogs        │   │
+│ │                 │  │   • delete_worklog       │   │
 │ └─────────────────┘  └──────────────────────────┘   │
 │         ↓                    ↓                       │
 │  ┌──────────────────────────────────┐               │
@@ -56,6 +62,7 @@
 │ • /rest/api/2/search (JQL queries)                  │
 │ • /rest/api/2/issue/{key} (issue details)           │
 │ • /rest/api/2/issue/{key}/worklog (time logging)    │
+│ • /rest/api/2/issue/{key}/worklog/{id} (DELETE)     │
 │ • /rest/api/2/issue/{key}/transitions (status flow) │
 │ • /rest/api/2/issue/{key}/comment (comments)        │
 │ • /rest/api/2/issue (create issue)                  │
