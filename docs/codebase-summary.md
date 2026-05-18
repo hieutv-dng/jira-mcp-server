@@ -22,7 +22,7 @@ src/
 │   ├── tools/                            # Split theo concern
 │   │   ├── index.ts (25 LOC)             # Barrel — registerJiraTools()
 │   │   ├── user-tools.ts (29 LOC)        # get_current_user
-│   │   ├── issue-tools.ts (258 LOC)      # list_issues, get_issue_detail, update_issue
+│   │   ├── issue-tools.ts (284 LOC)      # list_issues, get_issue_detail, update_issue
 │   │   ├── issue-drift-warning.ts (79)   # Heuristic drift warning helper
 │   │   ├── create-issue-tool.ts (204)    # create_issue (schema lớn — tách riêng)
 │   │   └── worklog-tools.ts (227 LOC)    # log_work, list_worklogs, delete_worklog
@@ -107,6 +107,8 @@ app.post("/mcp", async (req, res) => {
 | `addWorklog(issueKey, hours, date, comment)` | Log giờ làm việc | Worklog ID |
 | `getTransitions(issueKey)` | Danh sách status có thể chuyển | `{transitions: Transition[]}` |
 | `transitionIssue(issueKey, transitionId, comment)` | Chuyển status | Void |
+| `updateAssignee(key, username \| null)` | Set/unassign assignee (fuzzy match qua resolveAssignee) | Void |
+| `updateDueDate(key, value \| null)` | Set/clear due date qua `PUT /issue/{key}` với `fields.duedate`. Sentinel `'clear'` ở tool layer → `null` ở client layer | Void |
 | `addComment(issueKey, comment)` | Thêm comment | Comment ID |
 | `createIssue(payload)` | Tạo issue mới (với custom fields) | Issue key (VD: XYZ-123) |
 
@@ -169,7 +171,7 @@ this.client.interceptors.response.use(
 | `get_current_user` | user-tools.ts | `{}` (no args) | getCurrentUser() via `/myself` | No confirm |
 | `list_issues` | issue-tools.ts | `{project?, assigneeFilter?, roleFilter?, statusFilter?, maxResults?}` | searchIssues + filters | No confirm |
 | `get_issue_detail` | issue-tools.ts | `{key}` | getIssue + drift detection | Drift warning |
-| `update_issue` | issue-tools.ts | `{key, assignee?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → transitionIssue + addComment (combine flow) | **CONFIRM** |
+| `update_issue` | issue-tools.ts | `{key, assignee?, dueDate?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → updateDueDate → transitionIssue + addComment (combine flow) | **CONFIRM** |
 | `create_issue` | create-issue-tool.ts | `{projectKey, issueType, summary, description, priority, labels, spda?, congDoan?, dueDate?, assignee?, epicKey?, dryRun?}` | createIssue + metadata + fuzzy resolve | **CONFIRM** |
 | `log_work` | worklog-tools.ts | `{key, timeSpent, comment, startedAt}` | addWorklog | **CONFIRM** |
 | `list_worklogs` | worklog-tools.ts | `{username?, dateFrom?, dateTo?, projectKey?, detail?}` | searchIssues + getIssueWorklogs (aggregate hoặc per-entry) | No confirm |
@@ -351,7 +353,7 @@ MCP SDK reads này để prompt user confirmation trước execute. Note: `updat
 ```json
 {
   "name": "jira-mcp-server",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "type": "module",
   "scripts": {
     "build": "tsc",

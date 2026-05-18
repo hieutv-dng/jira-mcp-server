@@ -4,7 +4,7 @@ MCP (Model Context Protocol) server tích hợp Jira cho Claude AI. Hỗ trợ C
 
 | Thông tin | Giá trị |
 |-----------|--------|
-| **Phiên bản** | v1.2.0 |
+| **Phiên bản** | v1.3.0 |
 | **Trạng thái** | Production-ready |
 | **Xác thực** | Personal Access Token (PAT) |
 | **Transports** | Stdio (Claude Desktop), HTTP (LangChain, remote) |
@@ -109,7 +109,7 @@ Tất cả write operations (log_work, update_issue, create_issue, delete_worklo
 | **log_work** | Ghi nhận giờ làm (yêu cầu startedAt) | Timesheet, tracking |
 | **list_worklogs** | Tổng giờ đã log (summary hoặc detail per-entry) | Báo cáo timesheet, lấy worklogId |
 | **delete_worklog** | Xoá worklog (batch + dryRun + best-effort) | Sửa log nhầm |
-| **update_issue** | Chuyển status, comment, resolution | Cập nhật trạng thái |
+| **update_issue** | Assign, transition, comment, **set/clear due date** | Cập nhật trạng thái, deadline |
 | **create_issue** | Tạo issue (Task, Bug, Story) | Tạo work item mới |
 
 **Ví dụ nhanh:**
@@ -153,6 +153,18 @@ update_issue({
   issueKey: "PROJ-123", 
   transitionName: "Done", 
   resolution: "Fixed"
+})
+
+# Update due date
+update_issue({
+  issueKey: "PROJ-123",
+  dueDate: "2026-06-30"
+})
+
+# Gỡ due date
+update_issue({
+  issueKey: "PROJ-123",
+  dueDate: "clear"
 })
 
 # Tạo task mới

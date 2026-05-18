@@ -324,6 +324,17 @@ export class JiraClient {
     });
   }
 
+  /**
+   * Cập nhật due date của issue.
+   * @param issueKey - VD: "PROJAI-123"
+   * @param dueDate  - "YYYY-MM-DD" hoặc null (= clear)
+   */
+  async updateDueDate(issueKey: string, dueDate: string | null): Promise<void> {
+    await this.http.put(`/issue/${issueKey}`, {
+      fields: { duedate: dueDate },
+    });
+  }
+
   // ─── COMMENTS ─────────────────────────────
 
   /**

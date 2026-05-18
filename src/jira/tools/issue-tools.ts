@@ -178,10 +178,11 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
     "hoặc xem transitions khả dụng. " +
     "Dùng dryRun=true để xem danh sách transitions mà không thay đổi gì. " +
     "Truyền assignee để gán/gỡ người làm. " +
+    "Truyền dueDate để đổi/gỡ deadline ('clear' = gỡ). " +
     "Truyền chỉ comment (không transitionName) để thêm ghi chú mà không đổi status. " +
     "Truyền transitionName để chuyển trạng thái (kèm comment, resolution nếu cần). " +
-    "Có thể combine assignee + transitionName + comment trong cùng 1 call. " +
-    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi assignee, status hoặc thêm comment.",
+    "Có thể combine assignee + dueDate + transitionName + comment trong cùng 1 call. " +
+    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi assignee, due date, status hoặc thêm comment.",
     {
       issueKey: z.string().describe("Jira issue key, VD: 'PROJAI-123'"),
       dryRun: z.boolean().default(false)
@@ -199,8 +200,17 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
           "Bỏ trống = không đổi assignee. " +
           "VD: 'nghiath', 'hieutv'. Hỗ trợ fuzzy match."
         ),
+      dueDate: z.string()
+        .regex(/^(\d{4}-\d{2}-\d{2}|clear)$/, "Format: YYYY-MM-DD hoặc 'clear'")
+        .optional()
+        .describe(
+          "Ngày hết hạn mới, format YYYY-MM-DD. " +
+          "'clear' = gỡ due date. " +
+          "Bỏ trống = không đổi. " +
+          "VD: '2026-06-15'."
+        ),
     },
-    withErrorHandler("update_issue", async ({ issueKey, dryRun, transitionName, comment, resolution, assignee }) => {
+    withErrorHandler("update_issue", async ({ issueKey, dryRun, transitionName, comment, resolution, assignee, dueDate }) => {
       // Case 1: dryRun — chỉ list transitions
       if (dryRun) {
         const transitions = await jira.getTransitions(issueKey);
@@ -214,11 +224,11 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
       }
 
       // Case 2: không có gì để làm
-      if (!transitionName && !comment && !assignee) {
+      if (!transitionName && !comment && !assignee && !dueDate) {
         return {
           content: [{
             type: "text",
-            text: `⚠️ Không có thay đổi — truyền assignee để gán/gỡ user, transitionName để đổi status, comment để thêm ghi chú, hoặc dryRun=true để xem transitions.`,
+            text: `⚠️ Không có thay đổi — truyền assignee, dueDate, transitionName, comment, hoặc dryRun=true.`,
           }],
         };
       }
@@ -237,14 +247,30 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
         }
       }
 
-      // Step B: Transition (kèm comment + resolution nếu có)
+      // Step B: Due date (set trước transition để workflow rule thấy field đã update)
+      if (dueDate) {
+        if (dueDate === "clear") {
+          await jira.updateDueDate(issueKey, null);
+          reportLines.push(`📅 Due date: ❌ Đã gỡ`);
+        } else {
+          await jira.updateDueDate(issueKey, dueDate);
+          const todayUtc = new Date().toISOString().slice(0, 10);
+          if (dueDate < todayUtc) {
+            reportLines.push(`📅 Due date: ${dueDate} (⚠️ đã qua so với hôm nay UTC ${todayUtc})`);
+          } else {
+            reportLines.push(`📅 Due date: ${dueDate}`);
+          }
+        }
+      }
+
+      // Step C: Transition (kèm comment + resolution nếu có)
       if (transitionName) {
         await jira.transitionIssue(issueKey, transitionName, { resolution, comment });
         reportLines.push(`🔄 Trạng thái mới: ${transitionName}`);
         if (resolution) reportLines.push(`✔️ Resolution: ${resolution}`);
         if (comment) reportLines.push(`💬 Comment: "${comment}"`);
       } else if (comment) {
-        // Step C: Comment standalone (chỉ khi không có transition để tránh duplicate)
+        // Step D: Comment standalone (chỉ khi không có transition để tránh duplicate)
         await jira.addComment(issueKey, comment);
         reportLines.push(`💬 Comment: "${comment}"`);
       }
