@@ -4,7 +4,7 @@
 
 **jira-mcp-server** là MCP (Model Context Protocol) server cung cấp công cụ Jira cho Claude AI assistants. Cho phép Claude tương tác trực tiếp với Jira Server/Data Center để quản lý issues, log work, comment, và transition issues.
 
-**Version:** v1.3.0
+**Version:** v1.4.0
 **Status:** Production-ready
 **Primary User:** Vietnamese dev teams sử dụng Jira Server/Data Center
 
@@ -17,7 +17,7 @@
 2. Xem chi tiết issue (description, comments, attachments)
 3. Log work (ghi nhận giờ làm việc)
 4. Transition issue (chuyển status: To Do → In Progress → Done)
-5. Thêm comment vào issue
+5. Thêm comment, labels, assignee, due date vào issue
 6. Tạo issue mới từ conversation
 7. Kiểm tra drift (khi issue description có thể lỗi thời so với comments)
 
@@ -126,13 +126,17 @@ Safety configuration defining which tools require user confirmation:
 
 ```json
 {
-  "tools": {
-    "requireConfirmation": ["log_work", "update_issue", "create_issue"]
+  "server": {
+    "name": "jira-mcp-server",
+    "version": "1.4.0"
+  },
+  "safety": {
+    "requireConfirmation": ["log_work", "update_issue", "create_issue", "delete_worklog"]
   }
 }
 ```
 
-**Changes:** `update_issue_status` + `add_comment` merged → `update_issue`. Multi-tenant HTTP headers auth replaces PAT management.
+**Changes:** Old status/comment tools merged → `update_issue`. Multi-tenant HTTP headers auth replaces PAT management.
 
 ## Dependencies
 

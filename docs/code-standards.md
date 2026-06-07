@@ -63,7 +63,7 @@ const canTransition = true;
 'log_work'              // record work hours
 'list_worklogs'         // list worklog entries (timesheet summary or detail with worklogId)
 'delete_worklog'        // delete worklog entries (batch, dryRun preview required first)
-'update_issue'          // assign/unassign + transition + comment (combine flow)
+'update_issue'          // assign/unassign + labels + due date + transition + comment (combine flow)
 'create_issue'          // create new issue with custom field resolve
 
 // Descriptions: Vietnamese + clear English terms
@@ -71,8 +71,8 @@ const canTransition = true;
 ```
 
 **Removed Tools (merged or deleted):**
-- `list_my_open_issues` → `list_issues` (expanded with filters)
-- `update_issue_status` + `add_comment` → merged into `update_issue`
+- Old personal-open-issue list tool → `list_issues` (expanded with filters)
+- Old status/comment tools → merged into `update_issue`
 - `get_available_transitions` → removed (available via `update_issue` dryRun)
 
 #### Error & Message Keys
@@ -112,11 +112,11 @@ export const jiraClient = new JiraClient(...);
 **File: src/index.ts**
 ```typescript
 // Import tools
-import { registerAllTools } from './jira/tools.ts';
+import { registerJiraTools } from './jira/tools/index.ts';
 
 // Main logic
 const server = new McpServer(...);
-registerAllTools(server);
+registerJiraTools(server);
 ```
 
 **File: src/shared/index.ts**
@@ -286,14 +286,16 @@ export function withErrorHandler<T>(
 ### Usage in Tool Handler
 
 ```typescript
-// tools.ts
-server.setRequestHandler(Tool, async (req: ToolRequest) => {
-  return withErrorHandler(async () => {
-    const args = InputSchema.parse(req.params.arguments);
-    const result = await jiraClient.method(args);
+// src/jira/tools/example-tools.ts
+server.tool(
+  "example_tool",
+  "Tool description in Vietnamese.",
+  { issueKey: z.string().min(1, "Issue key required") },
+  withErrorHandler("example_tool", async ({ issueKey }) => {
+    const result = await jiraClient.method(issueKey);
     return formatOutput(result);
-  });
-});
+  })
+);
 ```
 
 ## Input Validation with Zod
@@ -310,10 +312,10 @@ const ListIssuesSchema = z.object({
 });
 
 const LogWorkSchema = z.object({
-  key: z.string().min(1, 'Issue key required'),
-  hours: z.number().positive('Hours must be > 0').max(24),
-  date: z.string().datetime().optional(),
-  comment: z.string().optional()
+  issueKey: z.string().min(1, 'Issue key required'),
+  timeSpent: z.string().min(1, 'Time spent required'),
+  comment: z.string().min(1, 'Comment required'),
+  startedAt: z.string().min(1, 'Started date required')
 });
 
 // Type inference
@@ -520,7 +522,7 @@ const storyPoints = issue.customfield_10029 ?? 0;
 ### CONSTANT_CASE for Config
 
 ```typescript
-// shared/utils.ts (UPDATED v1.2.0)
+// shared/utils.ts (UPDATED v1.4.0)
 export const TOOL_CHAINING = {
   'get_current_user': 'list_issues',
   'list_issues': 'get_issue_detail or create_issue',

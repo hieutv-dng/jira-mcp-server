@@ -2,9 +2,9 @@
 
 ## Overview
 
-jira-mcp-server là Node.js/TypeScript project (~2000 LOC) cung cấp MCP server cho Jira integration. Tools split theo concern trong `src/jira/tools/` directory.
+jira-mcp-server là Node.js/TypeScript project (~2400 LOC) cung cấp MCP server cho Jira integration. Tools split theo concern trong `src/jira/tools/` directory.
 
-**Total LOC:** ~2000
+**Total LOC:** ~2400
 **Language:** TypeScript (ES2022, strict mode, NodeNext)
 **Build:** tsc → dist/
 **Transport:** stdio (default) | HTTP (via HTTP_PORT env var)
@@ -18,18 +18,18 @@ src/
 │   ├── stdio-transport.ts — Stdio transport (default)
 │   └── http-transport.ts — HTTP transport (Express + Bearer auth)
 ├── jira/
-│   ├── client.ts (856 LOC)
+│   ├── client.ts (895 LOC)
 │   ├── tools/                            # Split theo concern
 │   │   ├── index.ts (25 LOC)             # Barrel — registerJiraTools()
 │   │   ├── user-tools.ts (29 LOC)        # get_current_user
-│   │   ├── issue-tools.ts (284 LOC)      # list_issues, get_issue_detail, update_issue
+│   │   ├── issue-tools.ts (334 LOC)      # list_issues, get_issue_detail, update_issue
 │   │   ├── issue-drift-warning.ts (79)   # Heuristic drift warning helper
 │   │   ├── create-issue-tool.ts (204)    # create_issue (schema lớn — tách riêng)
 │   │   └── worklog-tools.ts (227 LOC)    # log_work, list_worklogs, delete_worklog
 │   └── formatter.ts (329 LOC)
 └── shared/
     ├── index.ts (re-export)
-    └── utils.ts (87 LOC)
+    └── utils.ts (88 LOC)
 
 Config:
 ├── mcp-config.json — Safety config
@@ -40,12 +40,12 @@ Config:
 
 ## File-by-File Breakdown
 
-### 1. **src/index.ts** (25 LOC)
+### 1. **src/index.ts** (37 LOC)
 **Purpose:** Entry point — khởi tạo MCP server, register tools, select transport.
 
 ```typescript
 // Pseudocode
-const server = new McpServer({ name: "jira-mcp-server", version: "1.0.0" });
+const server = new McpServer({ name: "jira-mcp-server", version: "1.4.0" });
 registerJiraTools(server);
 
 // Transport selection based on env
@@ -71,7 +71,7 @@ export async function startStdioTransport(server: McpServer): Promise<void> {
 }
 ```
 
-### 1.2 **src/transports/http-transport.ts** (85 LOC)
+### 1.2 **src/transports/http-transport.ts** (145 LOC)
 **Purpose:** HTTP transport for LangChain, remote agents, HTTP-capable clients.
 
 **Key Features:**
@@ -93,7 +93,7 @@ app.post("/mcp", async (req, res) => {
 });
 ```
 
-### 2. **src/jira/client.ts** (727 LOC)
+### 2. **src/jira/client.ts** (895 LOC)
 **Purpose:** Jira REST API v2 wrapper — singleton instance gọi API, fuzzy matching, custom field resolution.
 
 **Class:** `JiraClient`
@@ -109,6 +109,7 @@ app.post("/mcp", async (req, res) => {
 | `transitionIssue(issueKey, transitionId, comment)` | Chuyển status | Void |
 | `updateAssignee(key, username \| null)` | Set/unassign assignee (fuzzy match qua resolveAssignee) | Void |
 | `updateDueDate(key, value \| null)` | Set/clear due date qua `PUT /issue/{key}` với `fields.duedate`. Sentinel `'clear'` ở tool layer → `null` ở client layer | Void |
+| `updateLabels(key, {add?, remove?, clear?})` | Add/remove labels incremental hoặc clear rồi set lại labels qua `PUT /issue/{key}` | Void |
 | `addComment(issueKey, comment)` | Thêm comment | Comment ID |
 | `createIssue(payload)` | Tạo issue mới (với custom fields) | Issue key (VD: XYZ-123) |
 
@@ -170,22 +171,22 @@ this.client.interceptors.response.use(
 |---|---|---|---|---|
 | `get_current_user` | user-tools.ts | `{}` (no args) | getCurrentUser() via `/myself` | No confirm |
 | `list_issues` | issue-tools.ts | `{project?, assigneeFilter?, roleFilter?, statusFilter?, maxResults?}` | searchIssues + filters | No confirm |
-| `get_issue_detail` | issue-tools.ts | `{key}` | getIssue + drift detection | Drift warning |
-| `update_issue` | issue-tools.ts | `{key, assignee?, dueDate?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → updateDueDate → transitionIssue + addComment (combine flow) | **CONFIRM** |
+| `get_issue_detail` | issue-tools.ts | `{issueKey}` | getIssue + drift detection | Drift warning |
+| `update_issue` | issue-tools.ts | `{issueKey, assignee?, addLabels?, removeLabels?, clearLabels?, dueDate?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → updateLabels → updateDueDate → transitionIssue + addComment (combine flow) | **CONFIRM** |
 | `create_issue` | create-issue-tool.ts | `{projectKey, issueType, summary, description, priority, labels, spda?, congDoan?, dueDate?, assignee?, epicKey?, dryRun?}` | createIssue + metadata + fuzzy resolve | **CONFIRM** |
-| `log_work` | worklog-tools.ts | `{key, timeSpent, comment, startedAt}` | addWorklog | **CONFIRM** |
+| `log_work` | worklog-tools.ts | `{issueKey, timeSpent, comment, startedAt}` | addWorklog | **CONFIRM** |
 | `list_worklogs` | worklog-tools.ts | `{username?, dateFrom?, dateTo?, projectKey?, detail?}` | searchIssues + getIssueWorklogs (aggregate hoặc per-entry) | No confirm |
 | `delete_worklog` | worklog-tools.ts | `{issueKey, worklogIds: string[], dryRun?}` | batch DELETE best-effort, dryRun preview | **CONFIRM + dryRun first** |
 
 **Refactor notes (v1.2):**
 - `src/jira/tools.ts` (single file, 663 LOC) → split sang `src/jira/tools/` (5 file + 1 helper, ≤270 LOC mỗi file)
 - `src/index.ts:13` import đổi `./jira/tools.js` → `./jira/tools/index.js` (NodeNext ESM không hỗ trợ directory imports)
-- `buildQuickDriftWarning` tách sang `issue-drift-warning.ts` để giữ `issue-tools.ts` ≤ 270 dòng
+- `buildQuickDriftWarning` tách sang `issue-drift-warning.ts`; `issue-tools.ts` hiện vượt 300 LOC do mở rộng `update_issue`, refactor tách nhỏ để sau
 
 **Old Tools (REMOVED/RENAMED):**
-- `list_my_open_issues` → `list_issues` (expanded with filters)
-- `update_issue_status` + `add_comment` → merged into `update_issue`
-- `get_available_transitions` → removed (available via `update_issue` dryRun)
+- Old personal-open-issue list tool → `list_issues` (expanded with filters)
+- Old status/comment tools → merged into `update_issue`
+- Old transition-list tool → removed (available via `update_issue` dryRun)
 
 **Key Implementation:**
 
@@ -199,14 +200,14 @@ this.client.interceptors.response.use(
 
 2. **Tool Registration Pattern:**
    ```typescript
-   server.setRequestHandler(
-     Tool,
-     async (req: ToolRequest) => {
-       const args = req.params.arguments;
-       return withErrorHandler(() => {
-         // Validate, call JiraClient, format response
-       });
-     }
+   server.tool(
+     "example_tool",
+     "Tool description in Vietnamese.",
+     { issueKey: z.string().min(1) },
+     withErrorHandler("example_tool", async ({ issueKey }) => {
+       const result = await jiraClient.method(issueKey);
+       return formatOutput(result);
+     })
    );
    ```
 
@@ -220,7 +221,7 @@ this.client.interceptors.response.use(
 
 4. **Tool Chaining (getChainHint):**
    - Mỗi tool response đi kèm `chainHint` gợi ý hành động tiếp theo
-   - Ví dụ: `get_issue_detail` → `logWork` hoặc `updateIssueStatus`
+   - Ví dụ: `get_issue_detail` → `log_work` hoặc `update_issue`
 
 5. **Confirmation Flow (mcp-config.json):**
    - Tools trong `requireConfirmation` array sẽ CLI prompt user trước khi execute
@@ -284,7 +285,7 @@ User cannot login with SSO...
 | `withErrorHandler(handler)` | Try-catch wrapper for all tool handlers |
 | `getChainHint(toolName)` | Return next tool suggestion |
 
-**TOOL_CHAINING Map (UPDATED v1.2.0):**
+**TOOL_CHAINING Map (UPDATED v1.4.0):**
 
 ```typescript
 const TOOL_CHAINING = {
@@ -318,12 +319,16 @@ export * from './utils.ts';
 
 ## Configuration Files
 
-### **mcp-config.json** (UPDATED v1.2.0)
+### **mcp-config.json** (UPDATED v1.4.0)
 Safety configuration:
 
 ```json
 {
-  "tools": {
+  "server": {
+    "name": "jira-mcp-server",
+    "version": "1.4.0"
+  },
+  "safety": {
     "requireConfirmation": [
       "log_work",
       "update_issue",
@@ -334,7 +339,7 @@ Safety configuration:
 }
 ```
 
-MCP SDK reads này để prompt user confirmation trước execute. Note: `update_issue` merged old `update_issue_status` + `add_comment`. `delete_worklog` requires dryRun preview before real delete.
+MCP SDK reads này để prompt user confirmation trước execute. Note: `update_issue` merged old status/comment flows. `delete_worklog` requires dryRun preview before real delete.
 
 ### **tsconfig.json**
 ```json
@@ -353,7 +358,7 @@ MCP SDK reads này để prompt user confirmation trước execute. Note: `updat
 ```json
 {
   "name": "jira-mcp-server",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -379,7 +384,7 @@ User Request
     ↓
 MCP Server (McpServer)
     ↓
-Tool Handler (tools.ts)
+Tool Handler (`src/jira/tools/*`)
     ├─ Input Validation (Zod)
     ├─ Confirmation Check (mcp-config.json)
     └─ Handler Execution (withErrorHandler)
@@ -413,8 +418,8 @@ export const jiraClient = new JiraClient(
   process.env.JIRA_PAT
 );
 
-// tools.ts
-import { jiraClient } from './client.ts';
+// src/jira/tools/issue-tools.ts
+import { jiraClient } from '../client.ts';
 const issues = await jiraClient.searchIssues(...);
 ```
 
@@ -433,7 +438,7 @@ return withErrorHandler(async () => {
 
 ### 3. **Zod Schema Validation**
 ```typescript
-const schema = z.object({ key: z.string() });
+const schema = z.object({ issueKey: z.string() });
 const args = schema.parse(req.params.arguments);
 ```
 
@@ -444,7 +449,7 @@ const args = schema.parse(req.params.arguments);
 return {
   content: [{ type: 'text', text: formattedIssue }],
   metadata: {
-    chainHint: getChainHint('get_issue_detail') // → "log_work or update_issue_status"
+    chainHint: getChainHint('get_issue_detail') // → "log_work or update_issue"
   }
 };
 ```
@@ -477,9 +482,9 @@ index.ts
 
 | Metric | Value | Note |
 |---|---|---|
-| Total LOC | ~1700 | Source only (excl. dist/, node_modules) |
-| Entry point | 25 LOC | Minimal, clean |
-| Longest file | client.ts (727 LOC) | Major growth: fuzzy matching + field resolution |
+| Total LOC | ~2400 | Source only |
+| Entry point | 37 LOC | Minimal, clean |
+| Longest file | client.ts (895 LOC) | Major growth: fuzzy matching + field resolution |
 | External deps | 4 prod | Minimal, well-chosen |
 | Dev deps | 3 | tsx, typescript, @types/node |
 | Test coverage | 0% | No unit tests (optional for v1) |
@@ -489,7 +494,7 @@ index.ts
 ### Error Handling
 ```typescript
 try {
-  const res = await this.client.get(`/rest/api/2/issue/${key}`);
+  const res = await this.http.get(`/issue/${issueKey}`);
   return res.data;
 } catch (err) {
   throw formatToolError(err);
@@ -499,8 +504,8 @@ try {
 ### Input Validation
 ```typescript
 const schema = z.object({
-  key: z.string().min(1),
-  hours: z.number().positive().max(24)
+  issueKey: z.string().min(1),
+  timeSpent: z.string().min(1)
 });
 const args = schema.parse(input);
 ```
@@ -544,8 +549,8 @@ HTTP_PORT=3000 MCP_AUTH_TOKEN=your-secret npm start
 
 **To Add a New Tool:**
 1. Add method to `JiraClient` (client.ts)
-2. Create Zod schema in tools.ts
-3. Register handler in tools.ts with `server.setRequestHandler()`
+2. Create Zod schema in `src/jira/tools/{group}-tools.ts`
+3. Register handler with `server.tool()` and export from `src/jira/tools/index.ts`
 4. Add formatter if needed (formatter.ts)
 5. Update tool chaining map (utils.ts)
 6. Test via MCP Inspector (`npm run inspect`)
@@ -554,20 +559,20 @@ HTTP_PORT=3000 MCP_AUTH_TOKEN=your-secret npm start
 ```typescript
 // client.ts
 async getIssueHistory(issueKey: string) {
-  const res = await this.client.get(`/rest/api/2/issue/${key}/changelog`);
+  const res = await this.http.get(`/issue/${issueKey}/changelog`);
   return res.data.values;
 }
 
-// tools.ts
-server.setRequestHandler(Tool, async (req: ToolRequest) => {
-  if (req.params.name === 'get_issue_history') {
-    const key = req.params.arguments.key as string;
-    const history = await jiraClient.getIssueHistory(key);
-    return {
-      content: [{ type: 'text', text: formatHistory(history) }]
-    };
-  }
-});
+// src/jira/tools/issue-tools.ts
+server.tool(
+  "get_issue_history",
+  "Lấy changelog của một Jira issue.",
+  { issueKey: z.string().describe("Jira issue key, VD: 'PROJ-123'") },
+  withErrorHandler("get_issue_history", async ({ issueKey }) => {
+    const history = await jira.getIssueHistory(issueKey);
+    return { content: [{ type: "text", text: formatHistory(history) }] };
+  })
+);
 ```
 
 ## Maintenance Notes
@@ -579,7 +584,12 @@ server.setRequestHandler(Tool, async (req: ToolRequest) => {
   - No Jira Cloud support (OAuth not implemented, PAT only)
   - Drift detection heuristic (not 100% accurate)
   - Custom field support: hardcoded fields (spda, congDoan) + fallback resolution
-- **Recent Changes (v1.2):**
+- **Recent Changes (v1.4):**
+  - Added labels update support to `update_issue`: `addLabels`, `removeLabels`, `clearLabels`
+  - Added `JiraClient.updateLabels()` with clear-then-set and incremental add/remove modes
+  - Added pre-flight conflict check for labels present in both add/remove arrays
+  - Bumped package version to v1.4.0
+- **Previous changes (v1.2):**
   - Added `delete_worklog` tool (batch + dryRun + best-effort) — xoá worklog đã log nhầm
   - Added `list_worklogs.detail` param → flatten per-entry với worklogId
   - Added `formatWorklogDetail()` + `WorklogEntry` interface in formatter
@@ -591,5 +601,5 @@ server.setRequestHandler(Tool, async (req: ToolRequest) => {
   - Added `duedate`, `reporter`, `resolution` fields to search/formatters
   - Removed manage_jira_pat (multi-tenant HTTP headers auth)
   - Enhanced create_issue with fuzzy field matching
-  - Merged update_issue_status + add_comment → update_issue
+  - Merged old status/comment tools → update_issue
   - Expanded list_issues with filtering (assignee, role, status)

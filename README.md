@@ -4,7 +4,7 @@ MCP (Model Context Protocol) server tích hợp Jira cho Claude AI. Hỗ trợ C
 
 | Thông tin | Giá trị |
 |-----------|--------|
-| **Phiên bản** | v1.3.0 |
+| **Phiên bản** | v1.4.0 |
 | **Trạng thái** | Production-ready |
 | **Xác thực** | Personal Access Token (PAT) |
 | **Transports** | Stdio (Claude Desktop), HTTP (LangChain, remote) |
@@ -109,7 +109,7 @@ Tất cả write operations (log_work, update_issue, create_issue, delete_worklo
 | **log_work** | Ghi nhận giờ làm (yêu cầu startedAt) | Timesheet, tracking |
 | **list_worklogs** | Tổng giờ đã log (summary hoặc detail per-entry) | Báo cáo timesheet, lấy worklogId |
 | **delete_worklog** | Xoá worklog (batch + dryRun + best-effort) | Sửa log nhầm |
-| **update_issue** | Assign, transition, comment, **set/clear due date** | Cập nhật trạng thái, deadline |
+| **update_issue** | Assign, labels, transition, comment, **set/clear due date** | Cập nhật trạng thái, nhãn, deadline |
 | **create_issue** | Tạo issue (Task, Bug, Story) | Tạo work item mới |
 
 **Ví dụ nhanh:**
@@ -119,7 +119,7 @@ Tất cả write operations (log_work, update_issue, create_issue, delete_worklo
 list_issues({ statusFilter: "open" })
 
 # Chi tiết issue
-get_issue_detail({ key: "PROJ-123" })
+get_issue_detail({ issueKey: "PROJ-123" })
 
 # Log 2 tiếng hôm qua
 log_work({ 
@@ -165,6 +165,33 @@ update_issue({
 update_issue({
   issueKey: "PROJ-123",
   dueDate: "clear"
+})
+
+# Thêm labels
+update_issue({
+  issueKey: "PROJ-123",
+  addLabels: ["backend", "urgent"]
+})
+
+# Xoá labels
+update_issue({
+  issueKey: "PROJ-123",
+  removeLabels: ["blocked", "needs-info"]
+})
+
+# Xoá toàn bộ labels rồi set lại
+update_issue({
+  issueKey: "PROJ-123",
+  clearLabels: true,
+  addLabels: ["triaged", "ready"]
+})
+
+# Combine: labels + assignee + transition
+update_issue({
+  issueKey: "PROJ-123",
+  addLabels: ["urgent"],
+  assignee: "hieutv",
+  transitionName: "In Progress"
 })
 
 # Tạo task mới

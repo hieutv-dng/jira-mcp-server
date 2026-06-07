@@ -96,19 +96,19 @@
 **Flow:**
 1. Claude sends `ToolRequest` via stdin (MCP format)
 2. Server parses request → identifies tool name
-3. Invokes tool handler (from tools.ts)
+3. Invokes tool handler (from `src/jira/tools/*`)
 4. Returns `ToolResponse` via stdout (MCP format)
 
-### 2. Tool Registration Layer (tools.ts)
+### 2. Tool Registration Layer (`src/jira/tools/*`)
 
 **Responsibility:** Define tool schemas, validate inputs, invoke handlers, format outputs.
 
 ```
 User Request
     ↓
-[Tool: list_my_open_issues]
+[Tool: list_issues]
     ├─ Input Schema (Zod)
-    │  └─ { project?: string, maxResults?: number }
+    │  └─ { projectKey?: string, assigneeFilter?, statusFilter? }
     ├─ Validation
     │  └─ Parse args, throw if invalid
     ├─ Handler
@@ -125,9 +125,9 @@ User Request
 |---|---|---|---|
 | `get_current_user` | none | getCurrentUser() (`/myself`) | Username, email, timezone |
 | `list_issues` | JQL + filters | searchIssues() + filter | Issue list table |
-| `get_issue_detail` | Issue key | getIssue() + drift check | Detail markdown + warning |
-| `log_work` | key, hours, date | addWorklog() | Confirmation message |
-| `update_issue` | key, assignee?, transitionName?, comment?, resolution? | updateAssignee → transitionIssue → addComment (combine) | Combined update report |
+| `get_issue_detail` | issueKey | getIssue() + drift check | Detail markdown + warning |
+| `log_work` | issueKey, timeSpent, comment, startedAt | addWorklog() | Confirmation message |
+| `update_issue` | issueKey, assignee?, labels?, dueDate?, transitionName?, comment?, resolution? | updateAssignee → updateLabels → updateDueDate → transitionIssue/addComment | Combined update report |
 | `create_issue` | project, summary, fields | createIssue() + fuzzy resolve custom fields | New issue key + link |
 
 **Safety Layer:**
@@ -286,7 +286,7 @@ User cannot login with SSO...
 │ getChainHint(toolName)             │
 ├────────────────────────────────────┤
 │ Looks up TOOL_CHAINING map:        │
-│ 'list_my_open_issues' →            │
+│ 'list_issues' →                    │
 │   'get_issue_detail'               │
 │ Returns suggestion for next action │
 └────────────────────────────────────┘
@@ -299,13 +299,13 @@ User: "Get issue XYZ-123"
     ↓
 Claude sends: {
   name: "get_issue_detail",
-  arguments: { key: "XYZ-123" }
+  arguments: { issueKey: "XYZ-123" }
 }
     ↓
 MCP Server receives request
     ↓
-Tool Handler (tools.ts):
-    ├─ Validate: GetIssueSchema.parse({ key: "XYZ-123" })
+Tool Handler (`src/jira/tools/issue-tools.ts`):
+    ├─ Validate: schema parse `{ issueKey: "XYZ-123" }`
     ├─ Call: withErrorHandler(async () => {
     │   const issue = await jiraClient.getIssue("XYZ-123")
     │   const drift = buildQuickDriftWarning(issue)
@@ -339,7 +339,7 @@ Tool Handler returns: {
     text: "## XYZ-123: ...\n⚠️ DRIFT DETECTED: ..."
   }],
   metadata: {
-    chainHint: "log_work or update_issue_status"
+    chainHint: "log_work or update_issue"
   }
 }
     ↓
@@ -347,7 +347,7 @@ MCP Server sends response via stdout
     ↓
 Claude reads markdown, displays to user
     ↓
-User sees drift warning, can call log_work or updateIssueStatus next
+User sees drift warning, can call `log_work` or `update_issue` next
 ```
 
 ## Authentication Flow
@@ -380,7 +380,7 @@ User sees drift warning, can call log_work or updateIssueStatus next
 - Invalid PAT → 401 API response → `AUTHENTICATION_FAILED` error
 - PAT with insufficient permissions → 403 API response → `PERMISSION_DENIED` error
 
-## Tool Chaining Map (UPDATED v1.2.0)
+## Tool Chaining Map (UPDATED v1.4.0)
 
 ```
 Entry point:
@@ -414,7 +414,7 @@ Workflow:
   6. update_issue → (add comment + move to Done)
 ```
 
-**chainHint Values (UPDATED v1.2.0):**
+**chainHint Values (UPDATED v1.4.0):**
 ```typescript
 {
   'get_current_user': 'list_issues (assigneeFilter defaults to currentUser())',
@@ -616,7 +616,7 @@ MCP Server ←────────┤─ Request 2 (stdin)
 jira-mcp-server
 ├── Internal Dependencies
 │   ├── src/jira/client.ts (JiraClient)
-│   ├── src/jira/tools.ts (Tool Handlers)
+│   ├── src/jira/tools/ (Tool Handlers)
 │   ├── src/jira/formatter.ts (Output Formatting)
 │   └── src/shared/utils.ts (Utilities)
 │
