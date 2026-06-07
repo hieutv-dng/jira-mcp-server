@@ -35,6 +35,11 @@ function buildUserClause(role: string, assigneeFilter: string): string {
   return `${jqlField} = ${userValue} AND `;
 }
 
+function findLabelConflict(addLabels: string[] = [], removeLabels: string[] = []): string | null {
+  const removeSet = new Set(removeLabels.map((label) => label.toLowerCase()));
+  return addLabels.find((label) => removeSet.has(label.toLowerCase())) ?? null;
+}
+
 export function registerIssueTools(server: McpServer, jira: JiraClient) {
   // ── TOOL: Lấy danh sách issues ─────────────
   server.tool(
@@ -174,25 +179,20 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
   // ── TOOL: Cập nhật issue (assign + transition + comment) ───────
   server.tool(
     "update_issue",
-    "Cập nhật Jira issue: assign/unassign user, chuyển trạng thái, thêm comment, " +
+    "Cập nhật Jira issue: assign/unassign user, thêm/xoá/clear labels, chuyển trạng thái, thêm comment, " +
     "hoặc xem transitions khả dụng. " +
     "Dùng dryRun=true để xem danh sách transitions mà không thay đổi gì. " +
     "Truyền assignee để gán/gỡ người làm. " +
+    "Truyền addLabels/removeLabels để thêm/xoá labels, clearLabels=true để xoá hết labels. " +
     "Truyền dueDate để đổi/gỡ deadline ('clear' = gỡ). " +
     "Truyền chỉ comment (không transitionName) để thêm ghi chú mà không đổi status. " +
     "Truyền transitionName để chuyển trạng thái (kèm comment, resolution nếu cần). " +
-    "Có thể combine assignee + dueDate + transitionName + comment trong cùng 1 call. " +
-    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi assignee, due date, status hoặc thêm comment.",
+    "Có thể combine assignee + labels + dueDate + transitionName + comment trong cùng 1 call. " +
+    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi assignee, labels, due date, status hoặc thêm comment.",
     {
       issueKey: z.string().describe("Jira issue key, VD: 'PROJAI-123'"),
       dryRun: z.boolean().default(false)
         .describe("true = chỉ xem transitions khả dụng, không thay đổi gì"),
-      transitionName: z.string().optional()
-        .describe("Tên trạng thái muốn chuyển. VD: 'In Progress', 'Done'. Bỏ trống nếu chỉ muốn comment."),
-      resolution: z.string().optional()
-        .describe("Resolution khi đóng task. VD: 'Done', 'Fixed'. Chỉ cần khi chuyển sang Done/Resolved."),
-      comment: z.string().optional()
-        .describe("Ghi chú kèm theo. Có thể dùng độc lập (không cần transitionName) hoặc kèm transition."),
       assignee: z.string().optional()
         .describe(
           "Username muốn assign. " +
@@ -200,6 +200,15 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
           "Bỏ trống = không đổi assignee. " +
           "VD: 'nghiath', 'hieutv'. Hỗ trợ fuzzy match."
         ),
+      addLabels: z.array(z.string().trim().min(1))
+        .optional()
+        .describe("Danh sách labels cần thêm. VD: ['backend', 'urgent']. Bỏ trống = không thêm."),
+      removeLabels: z.array(z.string().trim().min(1))
+        .optional()
+        .describe("Danh sách labels cần xoá. Jira tự bỏ qua label không tồn tại."),
+      clearLabels: z.boolean()
+        .default(false)
+        .describe("true = xoá toàn bộ labels. Nếu truyền cùng addLabels thì clear rồi set lại bằng addLabels."),
       dueDate: z.string()
         .regex(/^(\d{4}-\d{2}-\d{2}|clear)$/, "Format: YYYY-MM-DD hoặc 'clear'")
         .optional()
@@ -209,8 +218,25 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
           "Bỏ trống = không đổi. " +
           "VD: '2026-06-15'."
         ),
+      transitionName: z.string().optional()
+        .describe("Tên trạng thái muốn chuyển. VD: 'In Progress', 'Done'. Bỏ trống nếu chỉ muốn comment."),
+      resolution: z.string().optional()
+        .describe("Resolution khi đóng task. VD: 'Done', 'Fixed'. Chỉ cần khi chuyển sang Done/Resolved."),
+      comment: z.string().optional()
+        .describe("Ghi chú kèm theo. Có thể dùng độc lập (không cần transitionName) hoặc kèm transition."),
     },
-    withErrorHandler("update_issue", async ({ issueKey, dryRun, transitionName, comment, resolution, assignee, dueDate }) => {
+    withErrorHandler("update_issue", async ({
+      issueKey,
+      dryRun,
+      assignee,
+      addLabels,
+      removeLabels,
+      clearLabels,
+      dueDate,
+      transitionName,
+      resolution,
+      comment,
+    }) => {
       // Case 1: dryRun — chỉ list transitions
       if (dryRun) {
         const transitions = await jira.getTransitions(issueKey);
@@ -224,16 +250,25 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
       }
 
       // Case 2: không có gì để làm
-      if (!transitionName && !comment && !assignee && !dueDate) {
+      const hasLabelChanges = clearLabels || (addLabels?.length ?? 0) > 0 || (removeLabels?.length ?? 0) > 0;
+      if (!transitionName && !comment && !assignee && !dueDate && !hasLabelChanges) {
         return {
           content: [{
             type: "text",
-            text: `⚠️ Không có thay đổi — truyền assignee, dueDate, transitionName, comment, hoặc dryRun=true.`,
+            text: `⚠️ Không có thay đổi — truyền assignee, addLabels, removeLabels, clearLabels, dueDate, transitionName, comment, hoặc dryRun=true.`,
           }],
         };
       }
 
-      // Case 3: combine flow — assignee → transition → comment
+      const labelConflict = findLabelConflict(addLabels, removeLabels);
+      if (labelConflict) {
+        throw new Error(
+          `Label "${labelConflict}" xuất hiện trong cả addLabels và removeLabels. ` +
+          "Hãy giữ label này ở một phía trước khi cập nhật."
+        );
+      }
+
+      // Case 3: combine flow — assignee → labels → due date → transition → comment
       const reportLines: string[] = [`✅ Đã cập nhật thành công!`, `📌 Issue: ${issueKey}`];
 
       // Step A: Assignee (assign trước để pass workflow guards của transition)
@@ -247,7 +282,23 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
         }
       }
 
-      // Step B: Due date (set trước transition để workflow rule thấy field đã update)
+      // Step B: Labels
+      if (hasLabelChanges) {
+        await jira.updateLabels(issueKey, { add: addLabels, remove: removeLabels, clear: clearLabels });
+
+        if (clearLabels && addLabels?.length) {
+          reportLines.push(`🏷️ Labels: ❌ Xoá hết → ✅ Set [${addLabels.join(", ")}]`);
+        } else if (clearLabels) {
+          reportLines.push(`🏷️ Labels: ❌ Đã xoá toàn bộ`);
+        } else {
+          const labelParts: string[] = [];
+          if (addLabels?.length) labelParts.push(`➕ ${addLabels.join(", ")}`);
+          if (removeLabels?.length) labelParts.push(`➖ ${removeLabels.join(", ")}`);
+          reportLines.push(`🏷️ Labels: ${labelParts.join(" | ")}`);
+        }
+      }
+
+      // Step C: Due date (set trước transition để workflow rule thấy field đã update)
       if (dueDate) {
         if (dueDate === "clear") {
           await jira.updateDueDate(issueKey, null);
@@ -263,14 +314,14 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
         }
       }
 
-      // Step C: Transition (kèm comment + resolution nếu có)
+      // Step D: Transition (kèm comment + resolution nếu có)
       if (transitionName) {
         await jira.transitionIssue(issueKey, transitionName, { resolution, comment });
         reportLines.push(`🔄 Trạng thái mới: ${transitionName}`);
         if (resolution) reportLines.push(`✔️ Resolution: ${resolution}`);
         if (comment) reportLines.push(`💬 Comment: "${comment}"`);
       } else if (comment) {
-        // Step D: Comment standalone (chỉ khi không có transition để tránh duplicate)
+        // Step E: Comment standalone (chỉ khi không có transition để tránh duplicate)
         await jira.addComment(issueKey, comment);
         reportLines.push(`💬 Comment: "${comment}"`);
       }
@@ -281,4 +332,3 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
     })
   );
 }
-

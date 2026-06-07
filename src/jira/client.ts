@@ -335,6 +335,34 @@ export class JiraClient {
     });
   }
 
+  /**
+   * Cập nhật labels của issue.
+   * clear=true sẽ set lại toàn bộ labels bằng danh sách add.
+   * Ngược lại, Jira xử lý add/remove từng label qua update operations.
+   */
+  async updateLabels(
+    issueKey: string,
+    labels: { add?: string[]; remove?: string[]; clear?: boolean }
+  ): Promise<void> {
+    if (labels.clear) {
+      await this.http.put(`/issue/${issueKey}`, {
+        fields: { labels: labels.add ?? [] },
+      });
+      return;
+    }
+
+    const updates = [
+      ...(labels.add ?? []).map((label) => ({ add: label })),
+      ...(labels.remove ?? []).map((label) => ({ remove: label })),
+    ];
+
+    if (updates.length === 0) return;
+
+    await this.http.put(`/issue/${issueKey}`, {
+      update: { labels: updates },
+    });
+  }
+
   // ─── COMMENTS ─────────────────────────────
 
   /**

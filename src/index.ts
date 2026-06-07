@@ -16,7 +16,7 @@ import { startHttpTransport } from "./transports/http-transport.js";
 
 const server = new McpServer({
   name: "jira-mcp-server",
-  version: "1.2.0",
+  version: "1.4.0",
 });
 
 registerJiraTools(server);

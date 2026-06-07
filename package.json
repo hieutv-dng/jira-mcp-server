@@ -1,6 +1,6 @@
 {
   "name": "jira-mcp-server",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "MCP Server — Jira Tools (list, read, logwork, transition, comment, create)",
   "type": "module",
   "main": "dist/index.js",
