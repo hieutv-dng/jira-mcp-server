@@ -8,3 +8,4 @@ dist/
 
 # Local MCP client config (chứa PAT thật)
 .mcp.json
+.codex/
