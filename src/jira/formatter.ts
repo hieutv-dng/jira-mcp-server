@@ -26,6 +26,8 @@ interface JiraIssue {
     subtasks: Array<{ key: string; fields: { summary: string; status: { name: string } } }>;
     comment: { comments: Array<{ author: { displayName: string }; body: string; created: string }> };
     customfield_10016: number | null; // Story points
+    customfield_10100?: { value: string } | null; // Mã SPDA
+    customfield_10101?: { value: string } | null; // Công đoạn
     parent?: { key: string; fields: { summary: string } };
   };
 }
@@ -93,6 +95,8 @@ export function formatIssueForAI(issue: JiraIssue): string {
     `- **Tạo lúc:** ${formatDate(f.created)}`,
     `- **Cập nhật:** ${formatDate(f.updated)}`,
     f.customfield_10016 ? `- **Story Points:** ${f.customfield_10016}` : "",
+    f.customfield_10100?.value ? `- **Mã SPDA:** ${f.customfield_10100.value}` : "",
+    f.customfield_10101?.value ? `- **Công đoạn:** ${f.customfield_10101.value}` : "",
     f.labels?.length ? `- **Labels:** ${f.labels.join(", ")}` : "",
     f.parent ? `- **Parent:** [${f.parent.key}] ${f.parent.fields.summary}` : "",
     ""
