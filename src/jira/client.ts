@@ -726,7 +726,7 @@ export class JiraClient {
     const res = await this.http.get("/user/assignable/search", {
       params: {
         project: projectKey,
-        maxResults: 50,
+        maxResults: 300,
       },
     });
     return res.data as Array<{
