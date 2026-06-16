@@ -363,6 +363,23 @@ export class JiraClient {
     });
   }
 
+  /**
+   * Cập nhật các text field đơn giản của issue (summary, description).
+   * Gộp 1 PUT — chỉ gửi field có giá trị. Description giữ nguyên wiki markup.
+   * @param issueKey - VD: "PROJAI-123"
+   * @param fields   - { summary?, description? } — replace toàn bộ, không append.
+   */
+  async updateFields(
+    issueKey: string,
+    fields: { summary?: string; description?: string }
+  ): Promise<void> {
+    const payload: Record<string, unknown> = {};
+    if (fields.summary !== undefined) payload.summary = fields.summary;
+    if (fields.description !== undefined) payload.description = fields.description;
+    if (Object.keys(payload).length === 0) return;
+    await this.http.put(`/issue/${issueKey}`, { fields: payload });
+  }
+
   // ─── COMMENTS ─────────────────────────────
 
   /**

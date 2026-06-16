@@ -63,7 +63,7 @@ const canTransition = true;
 'log_work'              // record work hours
 'list_worklogs'         // list worklog entries (timesheet summary or detail with worklogId)
 'delete_worklog'        // delete worklog entries (batch, dryRun preview required first)
-'update_issue'          // assign/unassign + labels + due date + transition + comment (combine flow)
+'update_issue'          // assign/unassign + labels + due date + summary/description + transition + comment (combine flow)
 'create_issue'          // create new issue with custom field resolve
 
 // Descriptions: Vietnamese + clear English terms

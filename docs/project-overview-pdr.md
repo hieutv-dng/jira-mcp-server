@@ -17,7 +17,7 @@
 2. Xem chi tiết issue (description, comments, attachments)
 3. Log work (ghi nhận giờ làm việc)
 4. Transition issue (chuyển status: To Do → In Progress → Done)
-5. Thêm comment, labels, assignee, due date vào issue
+5. Thêm comment, labels, assignee, due date, summary, description vào issue
 6. Tạo issue mới từ conversation
 7. Kiểm tra drift (khi issue description có thể lỗi thời so với comments)
 
@@ -80,7 +80,7 @@ Jira Server/Data Center (REST API v2)
   - log_work (record hours)
   - list_worklogs (timesheet summary or detail with worklogId)
   - delete_worklog (batch delete with dryRun preview)
-  - update_issue (transition + comment + assignee)
+  - update_issue (transition + comment + assignee + summary/description)
   - create_issue (with fuzzy field matching)
 - ✅ Jira responses formatted as markdown (readable for AI)
 - ✅ Write operations require user confirmation (CLI prompts)

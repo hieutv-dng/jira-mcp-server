@@ -109,7 +109,7 @@ Tất cả write operations (log_work, update_issue, create_issue, delete_worklo
 | **log_work** | Ghi nhận giờ làm (yêu cầu startedAt) | Timesheet, tracking |
 | **list_worklogs** | Tổng giờ đã log (summary hoặc detail per-entry) | Báo cáo timesheet, lấy worklogId |
 | **delete_worklog** | Xoá worklog (batch + dryRun + best-effort) | Sửa log nhầm |
-| **update_issue** | Assign, labels, transition, comment, **set/clear due date** | Cập nhật trạng thái, nhãn, deadline |
+| **update_issue** | Assign, labels, transition, comment, set/clear due date, **sửa summary (tiêu đề) + description (mô tả)** | Cập nhật trạng thái, nhãn, deadline, tiêu đề, mô tả |
 | **create_issue** | Tạo issue (Task, Bug, Story) | Tạo work item mới |
 
 **Ví dụ nhanh:**
@@ -184,6 +184,18 @@ update_issue({
   issueKey: "PROJ-123",
   clearLabels: true,
   addLabels: ["triaged", "ready"]
+})
+
+# Đổi tiêu đề (summary)
+update_issue({
+  issueKey: "PROJ-123",
+  summary: "Tiêu đề mới rõ ràng hơn"
+})
+
+# Replace toàn bộ mô tả (description, wiki markup)
+update_issue({
+  issueKey: "PROJ-123",
+  description: "Mô tả mới\n\n* Bước 1\n* Bước 2"
 })
 
 # Combine: labels + assignee + transition

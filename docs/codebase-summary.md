@@ -172,7 +172,7 @@ this.client.interceptors.response.use(
 | `get_current_user` | user-tools.ts | `{}` (no args) | getCurrentUser() via `/myself` | No confirm |
 | `list_issues` | issue-tools.ts | `{project?, assigneeFilter?, roleFilter?, statusFilter?, maxResults?}` | searchIssues + filters | No confirm |
 | `get_issue_detail` | issue-tools.ts | `{issueKey}` | getIssue + drift detection | Drift warning |
-| `update_issue` | issue-tools.ts | `{issueKey, assignee?, addLabels?, removeLabels?, clearLabels?, dueDate?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → updateLabels → updateDueDate → transitionIssue + addComment (combine flow) | **CONFIRM** |
+| `update_issue` | issue-tools.ts | `{issueKey, assignee?, addLabels?, removeLabels?, clearLabels?, dueDate?, summary?, description?, transitionName?, comment?, resolution?, dryRun?}` | updateAssignee → updateLabels → updateDueDate → updateFields (summary/description) → transitionIssue + addComment (combine flow) | **CONFIRM** |
 | `create_issue` | create-issue-tool.ts | `{projectKey, issueType, summary, description, priority, labels, spda?, congDoan?, dueDate?, assignee?, epicKey?, dryRun?}` | createIssue + metadata + fuzzy resolve | **CONFIRM** |
 | `log_work` | worklog-tools.ts | `{issueKey, timeSpent, comment, startedAt}` | addWorklog | **CONFIRM** |
 | `list_worklogs` | worklog-tools.ts | `{username?, dateFrom?, dateTo?, projectKey?, detail?}` | searchIssues + getIssueWorklogs (aggregate hoặc per-entry) | No confirm |

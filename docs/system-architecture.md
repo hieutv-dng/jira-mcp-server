@@ -127,7 +127,7 @@ User Request
 | `list_issues` | JQL + filters | searchIssues() + filter | Issue list table |
 | `get_issue_detail` | issueKey | getIssue() + drift check | Detail markdown + warning |
 | `log_work` | issueKey, timeSpent, comment, startedAt | addWorklog() | Confirmation message |
-| `update_issue` | issueKey, assignee?, labels?, dueDate?, transitionName?, comment?, resolution? | updateAssignee → updateLabels → updateDueDate → transitionIssue/addComment | Combined update report |
+| `update_issue` | issueKey, assignee?, labels?, dueDate?, summary?, description?, transitionName?, comment?, resolution? | updateAssignee → updateLabels → updateDueDate → updateFields → transitionIssue/addComment | Combined update report |
 | `create_issue` | project, summary, fields | createIssue() + fuzzy resolve custom fields | New issue key + link |
 
 **Safety Layer:**

@@ -67,5 +67,5 @@ print(result)
 | `log_work` | Log work time on an issue |
 | `list_worklogs` | List worklog entries (timesheet summary or detail with worklogId) |
 | `delete_worklog` | Delete worklog entries (batch, dryRun preview required first) |
-| `update_issue` | Assign/unassign user, update issue status/comment |
+| `update_issue` | Assign/unassign user, update summary/description/labels/dueDate/status/comment |
 | `create_issue` | Create new issue with custom fields |

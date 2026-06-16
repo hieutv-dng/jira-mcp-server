@@ -185,10 +185,11 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
     "Truyền assignee để gán/gỡ người làm. " +
     "Truyền addLabels/removeLabels để thêm/xoá labels, clearLabels=true để xoá hết labels. " +
     "Truyền dueDate để đổi/gỡ deadline ('clear' = gỡ). " +
+    "Truyền summary để đổi tiêu đề (title). Truyền description để replace toàn bộ mô tả. " +
     "Truyền chỉ comment (không transitionName) để thêm ghi chú mà không đổi status. " +
     "Truyền transitionName để chuyển trạng thái (kèm comment, resolution nếu cần). " +
-    "Có thể combine assignee + labels + dueDate + transitionName + comment trong cùng 1 call. " +
-    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi assignee, labels, due date, status hoặc thêm comment.",
+    "Có thể combine assignee + labels + dueDate + summary + description + transitionName + comment trong cùng 1 call. " +
+    "⚠️ PHẢI hỏi user xác nhận TRƯỚC KHI thay đổi assignee, labels, due date, summary, description, status hoặc thêm comment.",
     {
       issueKey: z.string().describe("Jira issue key, VD: 'PROJAI-123'"),
       dryRun: z.boolean().default(false)
@@ -224,6 +225,10 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
         .describe("Resolution khi đóng task. VD: 'Done', 'Fixed'. Chỉ cần khi chuyển sang Done/Resolved."),
       comment: z.string().optional()
         .describe("Ghi chú kèm theo. Có thể dùng độc lập (không cần transitionName) hoặc kèm transition."),
+      summary: z.string().trim().min(1).optional()
+        .describe("Tiêu đề (title) mới cho issue. Replace toàn bộ. Bỏ trống = không đổi. ⚠️ PHẢI hỏi user xác nhận trước khi đổi."),
+      description: z.string().min(1).optional()
+        .describe("Mô tả mới (wiki markup). Replace TOÀN BỘ description cũ — không append. Muốn thêm nội dung: đọc get_issue_detail trước rồi gửi lại full text. ⚠️ PHẢI hỏi user xác nhận trước khi ghi đè."),
     },
     withErrorHandler("update_issue", async ({
       issueKey,
@@ -236,6 +241,8 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
       transitionName,
       resolution,
       comment,
+      summary,
+      description,
     }) => {
       // Case 1: dryRun — chỉ list transitions
       if (dryRun) {
@@ -251,11 +258,11 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
 
       // Case 2: không có gì để làm
       const hasLabelChanges = clearLabels || (addLabels?.length ?? 0) > 0 || (removeLabels?.length ?? 0) > 0;
-      if (!transitionName && !comment && !assignee && !dueDate && !hasLabelChanges) {
+      if (!transitionName && !comment && !assignee && !dueDate && !hasLabelChanges && !summary && !description) {
         return {
           content: [{
             type: "text",
-            text: `⚠️ Không có thay đổi — truyền assignee, addLabels, removeLabels, clearLabels, dueDate, transitionName, comment, hoặc dryRun=true.`,
+            text: `⚠️ Không có thay đổi — truyền assignee, addLabels, removeLabels, clearLabels, dueDate, summary, description, transitionName, comment, hoặc dryRun=true.`,
           }],
         };
       }
@@ -312,6 +319,13 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
             reportLines.push(`📅 Due date: ${dueDate}`);
           }
         }
+      }
+
+      // Step C2: Summary / Description (set trước transition để workflow rule thấy field đã update)
+      if (summary !== undefined || description !== undefined) {
+        await jira.updateFields(issueKey, { summary, description });
+        if (summary !== undefined) reportLines.push(`✏️ Summary: "${summary}"`);
+        if (description !== undefined) reportLines.push(`📝 Description: đã cập nhật (${description.length} ký tự)`);
       }
 
       // Step D: Transition (kèm comment + resolution nếu có)
