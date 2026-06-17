@@ -120,7 +120,7 @@ app.post("/mcp", async (req, res) => {
 | `updatePat(newPat)` | Swap PAT token at runtime (no restart) | `{previousMasked, newMasked, action}` |
 | `getCreateMeta()` | Parse QuickCreateIssue HTML cho field options | `{fields: {name, id, options[]}}` |
 | `getCustomFieldFromIssue(issueKey, fieldName)` | Fallback custom field reading | Field value |
-| `getAssignableUsers(projectKey)` | Danh sách users có thể assign | `User[]` |
+| `getAssignableUsers(projectKey)` | Danh sách users có thể assign (`maxResults=300` để cover project lớn) | `User[]` |
 | `searchEpics(projectKey)` | Tìm epics đang mở trong project | `Issue[]` |
 | `resolveCustomFieldOption(fieldName, userInput)` | Fuzzy match user input vs allowed values | `{matched: string, suggestions: string[]}` |
 | `resolveAssignee(projectKey, userInput)` | Fuzzy match username | `{matched: User, suggestions: User[]}` |
@@ -273,6 +273,7 @@ User cannot login with SSO...
 - **Priority Emoji:** 🔴 (Critical), 🔴 (High), 🟡 (Medium), 🟢 (Low)
 - **Date Formatting:** Vietnamese locale (vi-VN) — 27/03/2026 10:30
 - **Jira Markup → Markdown:** Remove wiki formatting, convert to standard MD
+- **Custom fields (chỉ hiện khi có giá trị):** Story Points (`customfield_10016`), Mã SPDA (`customfield_10100`), Công đoạn (`customfield_10101`)
 
 ### 5. **src/shared/utils.ts** (80 LOC)
 **Purpose:** Error handling + tool chaining utility.

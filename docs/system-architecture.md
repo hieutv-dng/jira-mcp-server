@@ -321,6 +321,7 @@ JiraClient.getIssue("XYZ-123"):
     ↓
 Formatter.formatIssueForAI(issue):
     ├─ Extract: summary, description, status, priority
+    ├─ Custom fields (nếu có): Story Points, Mã SPDA (cf_10100), Công đoạn (cf_10101)
     ├─ Drift Detection:
     │  ├─ Check issue age: created 45 days ago → +25 pts
     │  ├─ Count comments after update: 8 comments → +40 pts
