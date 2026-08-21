@@ -23,6 +23,7 @@ npm run inspect    # MCP Inspector for testing tools
 - `src/jira/tools/` — Tool registration split theo concern: `index.ts` barrel, `user-tools.ts`, `issue-tools.ts` (+ `issue-drift-warning.ts` helper), `create-issue-tool.ts`, `worklog-tools.ts`
 - `src/jira/client.ts` — JiraClient class wrapping Axios for REST API
 - `src/jira/formatter.ts` — Markdown output formatting for AI consumption
+- `src/jira/issue-link.ts` — Helper hyperlink Jira (`browseUrl`, `issueLink`): mọi output có issue key render `[KEY](url)` click được
 - `src/shared/utils.ts` — Error handling wrapper, tool chaining hints
 
 **Data flow:** Claude → MCP stdio → tools/* handler → JiraClient API call → formatter → Markdown response

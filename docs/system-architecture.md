@@ -213,6 +213,7 @@ Jira Issue Object (JSON)
     ├─ Extract fields (summary, description, status, priority)
     ├─ Clean Jira markup (h1, bold, lists)
     ├─ Add priority emoji (🔴 High, 🟡 Medium, 🟢 Low)
+    ├─ Linkify issue keys → [KEY](baseUrl/browse/KEY)
     ├─ Analyze description quality (GWT sections?)
     ├─ Check for drift (age + comments + keywords)
     ├─ Format dates (vi-VN locale)
@@ -619,6 +620,7 @@ jira-mcp-server
 │   ├── src/jira/client.ts (JiraClient)
 │   ├── src/jira/tools/ (Tool Handlers)
 │   ├── src/jira/formatter.ts (Output Formatting)
+│   ├── src/jira/issue-link.ts (Issue hyperlink helper)
 │   └── src/shared/utils.ts (Utilities)
 │
 └── External Dependencies

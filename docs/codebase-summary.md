@@ -26,7 +26,8 @@ src/
 │   │   ├── issue-drift-warning.ts (79)   # Heuristic drift warning helper
 │   │   ├── create-issue-tool.ts (204)    # create_issue (schema lớn — tách riêng)
 │   │   └── worklog-tools.ts (227 LOC)    # log_work, list_worklogs, delete_worklog
-│   └── formatter.ts (329 LOC)
+│   ├── formatter.ts (329 LOC)
+│   └── issue-link.ts                     # Helper hyperlink Jira (browseUrl, issueLink)
 └── shared/
     ├── index.ts (re-export)
     └── utils.ts (88 LOC)
@@ -239,6 +240,8 @@ this.client.interceptors.response.use(
 | `priorityEmoji()` | priority string | emoji + text | Convert "High" → "🔴 High" |
 | `formatDate()` | Date | vi-VN string | Localized (27/03/2026 10:30) |
 | `cleanJiraMarkup()` | Jira wiki text | Markdown | h1→#, *bold*→**bold** |
+
+> 🔗 **Hyperlink:** mọi issue key trong output (list, detail, parent, sub-tasks, bảng worklog, xác nhận write) render thành `[KEY](baseUrl/browse/KEY)` qua helper `issue-link.ts`. `formatIssueForAI`/`formatIssueListForAI` nhận thêm param `baseUrl`; 2 formatter worklog nhận `baseUrl` qua object `meta`.
 
 **Example Output (formatIssueListForAI):**
 
