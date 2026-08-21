@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { JiraClient } from "../client.js";
+import { browseUrl, issueLink } from "../issue-link.js";
 import { withErrorHandler, getChainHint } from "../../shared/index.js";
 
 // ─────────────────────────────────────────────
@@ -152,7 +153,7 @@ export function registerCreateIssueTool(server: McpServer, jira: JiraClient) {
             lines.push(`### Epics đang mở`);
             lines.push(`Tổng: ${epics.length} epic`);
             for (const e of epics) {
-              lines.push(`  • ${e.key} → "${e.fields.summary}" [${e.fields.status.name}]`);
+              lines.push(`  • ${issueLink(jira.getBaseUrl(), e.key)} → "${e.fields.summary}" [${e.fields.status.name}]`);
             }
             lines.push("");
           }
@@ -196,7 +197,7 @@ export function registerCreateIssueTool(server: McpServer, jira: JiraClient) {
           type: "text",
           text: `✅ Đã tạo issue thành công!\n` +
                 `🔑 Key: ${result.key}\n` +
-                `🔗 Link: ${jira.getBaseUrl()}/browse/${result.key}` + getChainHint("create_issue"),
+                `🔗 Link: ${browseUrl(jira.getBaseUrl(), result.key)}` + getChainHint("create_issue"),
         }],
       };
     })

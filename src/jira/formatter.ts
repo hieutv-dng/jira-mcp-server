@@ -8,6 +8,8 @@
 // để Claude phân tích chính xác hơn.
 // ─────────────────────────────────────────────
 
+import { browseUrl, issueLink } from "./issue-link.js";
+
 interface JiraIssue {
   key: string;
   fields: {
@@ -36,7 +38,7 @@ interface JiraIssue {
  * Format danh sách issues thành bảng markdown
  * Giúp Claude nhanh chóng nắm bắt toàn cảnh task list
  */
-export function formatIssueListForAI(issues: JiraIssue[], total: number): string {
+export function formatIssueListForAI(issues: JiraIssue[], total: number, baseUrl: string): string {
   const lines: string[] = [
     `# 📋 Danh sách Issues OPEN (${issues.length}/${total} issues)\n`,
   ];
@@ -51,7 +53,7 @@ export function formatIssueListForAI(issues: JiraIssue[], total: number): string
     const resolution = f.resolution?.name ? ` → ${f.resolution.name}` : "";
 
     lines.push(
-      `## ${priority} [${issue.key}] ${f.summary}`,
+      `## ${priority} ${issueLink(baseUrl, issue.key)} ${f.summary}`,
       `- **Status:** ${f.status?.name}${resolution}`,
       `- **Type:** ${f.issuetype?.name}${storyPoints}`,
       dueDate ? `- **Due:** ${dueDate}` : `- **Due:** ⚠️ Chưa set`,
@@ -63,7 +65,8 @@ export function formatIssueListForAI(issues: JiraIssue[], total: number): string
 
   lines.push(
     "---",
-    `💡 *Dùng \`get_issue_detail\` để đọc chi tiết từng task trước khi implement.*`
+    `💡 *Dùng \`get_issue_detail\` để đọc chi tiết từng task trước khi implement.*`,
+    `🔗 *Khi trả lời user, GIỮ NGUYÊN hyperlink \`[KEY](url)\` của từng issue để user click mở nhanh.*`
   );
 
   return lines.filter((l) => l !== "").join("\n");
@@ -73,19 +76,20 @@ export function formatIssueListForAI(issues: JiraIssue[], total: number): string
  * Format chi tiết 1 issue thành markdown đầy đủ
  * Bao gồm description, comments, subtasks
  */
-export function formatIssueForAI(issue: JiraIssue): string {
+export function formatIssueForAI(issue: JiraIssue, baseUrl: string): string {
   const f = issue.fields;
   const lines: string[] = [];
 
   // Header
   lines.push(
-    `# ${priorityEmoji(f.priority?.name)} [${issue.key}] ${f.summary}`,
+    `# ${priorityEmoji(f.priority?.name)} ${issueLink(baseUrl, issue.key)} ${f.summary}`,
     ""
   );
 
   // Metadata
   lines.push(
     "## 📌 Thông tin chung",
+    `- **Link:** ${browseUrl(baseUrl, issue.key)}`,
     `- **Loại:** ${f.issuetype?.name}`,
     `- **Trạng thái:** ${f.status?.name}${f.resolution?.name ? ` (${f.resolution.name})` : ""}`,
     `- **Độ ưu tiên:** ${f.priority?.name}`,
@@ -98,7 +102,7 @@ export function formatIssueForAI(issue: JiraIssue): string {
     f.customfield_10100?.value ? `- **Mã SPDA:** ${f.customfield_10100.value}` : "",
     f.customfield_10101?.value ? `- **Công đoạn:** ${f.customfield_10101.value}` : "",
     f.labels?.length ? `- **Labels:** ${f.labels.join(", ")}` : "",
-    f.parent ? `- **Parent:** [${f.parent.key}] ${f.parent.fields.summary}` : "",
+    f.parent ? `- **Parent:** ${issueLink(baseUrl, f.parent.key)} ${f.parent.fields.summary}` : "",
     ""
   );
 
@@ -116,7 +120,7 @@ export function formatIssueForAI(issue: JiraIssue): string {
     lines.push("## 🔀 Sub-tasks");
     for (const sub of f.subtasks) {
       const statusIcon = sub.fields.status.name === "Done" ? "✅" : "⬜";
-      lines.push(`- ${statusIcon} [${sub.key}] ${sub.fields.summary}`);
+      lines.push(`- ${statusIcon} ${issueLink(baseUrl, sub.key)} ${sub.fields.summary}`);
     }
     lines.push("");
   }
@@ -178,6 +182,8 @@ export function formatIssueForAI(issue: JiraIssue): string {
     `- Gọi \`task_kickoff\` để khởi tạo workflow đầy đủ cho task này.`,
     `- Gọi \`detect_files_from_task\` để tìm file liên quan.`,
     `- Gọi \`check_security_flag\` nếu task liên quan auth/token.`,
+    "",
+    `🔗 Khi tóm tắt cho user, GIỮ NGUYÊN hyperlink của issue (\`[${issue.key}](url)\` — link đầy đủ ở trên) để user click mở nhanh.`,
   );
 
   return lines.filter((l) => l !== null).join("\n");
@@ -249,7 +255,7 @@ export interface WorklogRow {
 export function formatWorklogSummary(
   rows: WorklogRow[],
   totalSeconds: number,
-  meta: { username: string; from: string; to: string; truncated?: boolean }
+  meta: { username: string; from: string; to: string; truncated?: boolean; baseUrl: string }
 ): string {
   const toHours = (sec: number) => (sec / 3600).toFixed(2) + "h";
   const toDays = (sec: number) => (sec / 28800).toFixed(2); // 8h = 1d
@@ -264,7 +270,7 @@ export function formatWorklogSummary(
     "",
     "| Issue | Summary | Hours |",
     "|-------|---------|-------|",
-    ...rows.map((r) => `| ${r.issueKey} | ${r.summary} | ${toHours(r.totalSeconds)} |`),
+    ...rows.map((r) => `| ${issueLink(meta.baseUrl, r.issueKey)} | ${r.summary} | ${toHours(r.totalSeconds)} |`),
     "",
     `🧮 **Total:** ${toHours(totalSeconds)} (${toDays(totalSeconds)} days @ 8h) · ${rows.length} issues`,
   ];
@@ -293,7 +299,7 @@ export interface WorklogEntry {
 
 export function formatWorklogDetail(
   entries: WorklogEntry[],
-  meta: { username: string; from: string; to: string; truncated?: boolean }
+  meta: { username: string; from: string; to: string; truncated?: boolean; baseUrl: string }
 ): string {
   if (entries.length === 0) {
     return `📊 **Worklog Detail** — \`${meta.username}\` (${meta.from} → ${meta.to})\n\n` +
@@ -307,7 +313,7 @@ export function formatWorklogDetail(
     "| WorklogID | Issue | Date | Hours | Comment |",
     "|-----------|-------|------|-------|---------|",
     ...sorted.map(e =>
-      `| \`${e.id}\` | ${e.issueKey} | ${e.date} | ${e.hours}h | ${(e.comment || "").slice(0, 80)} |`
+      `| \`${e.id}\` | ${issueLink(meta.baseUrl, e.issueKey)} | ${e.date} | ${e.hours}h | ${(e.comment || "").slice(0, 80)} |`
     ),
     "",
     `**Tổng:** ${total.toFixed(2)}h trên ${sorted.length} entries`,

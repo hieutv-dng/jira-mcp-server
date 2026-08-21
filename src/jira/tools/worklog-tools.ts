@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { JiraClient } from "../client.js";
 import { formatWorklogSummary, formatWorklogDetail, WorklogEntry } from "../formatter.js";
+import { issueLink } from "../issue-link.js";
 import { withErrorHandler, getChainHint } from "../../shared/index.js";
 
 // ─────────────────────────────────────────────
@@ -40,7 +41,7 @@ export function registerWorklogTools(server: McpServer, jira: JiraClient) {
         content: [{
           type: "text",
           text: `✅ Đã logwork thành công!\n` +
-                `📌 Issue: ${issueKey}\n` +
+                `📌 Issue: ${issueLink(jira.getBaseUrl(), issueKey)}\n` +
                 `⏱️  Thời gian: ${timeSpent}\n` +
                 `📅 Ngày: ${startedAt}\n` +
                 `📝 Ghi chú: ${comment}\n` +
@@ -120,7 +121,7 @@ export function registerWorklogTools(server: McpServer, jira: JiraClient) {
         return {
           content: [{
             type: "text",
-            text: formatWorklogDetail(entries, { username: resolvedUser, from, to, truncated })
+            text: formatWorklogDetail(entries, { username: resolvedUser, from, to, truncated, baseUrl: jira.getBaseUrl() })
               + getChainHint("list_worklogs"),
           }],
         };
@@ -146,7 +147,7 @@ export function registerWorklogTools(server: McpServer, jira: JiraClient) {
       return {
         content: [{
           type: "text",
-          text: formatWorklogSummary(rows, grandTotal, { username: resolvedUser, from, to, truncated })
+          text: formatWorklogSummary(rows, grandTotal, { username: resolvedUser, from, to, truncated, baseUrl: jira.getBaseUrl() })
             + getChainHint("list_worklogs"),
         }],
       };
@@ -175,7 +176,7 @@ export function registerWorklogTools(server: McpServer, jira: JiraClient) {
         const notFound = worklogIds.filter((id) => !matched.find((m) => m.id === id));
         const totalSec = matched.reduce((s, w) => s + w.timeSpentSeconds, 0);
         const lines = [
-          `🔍 **Dry Run** — sẽ xoá ${matched.length}/${worklogIds.length} worklog trên \`${issueKey}\``,
+          `🔍 **Dry Run** — sẽ xoá ${matched.length}/${worklogIds.length} worklog trên ${issueLink(jira.getBaseUrl(), issueKey)}`,
           "",
           "| WorklogID | Date | Hours | Author | Comment |",
           "|-----------|------|-------|--------|---------|",
@@ -211,7 +212,7 @@ export function registerWorklogTools(server: McpServer, jira: JiraClient) {
       const success = results.filter((r) => r.ok);
       const failed = results.filter((r) => !r.ok);
       const lines = [
-        `🗑️  **Delete Worklog** — issue \`${issueKey}\``,
+        `🗑️  **Delete Worklog** — issue ${issueLink(jira.getBaseUrl(), issueKey)}`,
         "",
         `✅ **Đã xoá:** ${success.length} worklog`,
       ];

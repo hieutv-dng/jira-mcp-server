@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from "axios";
+import { issueLink } from "./issue-link.js";
 
 // ─────────────────────────────────────────────
 // JiraClient: wrapper xung quanh Jira REST API
@@ -851,7 +852,7 @@ export class JiraClient {
       .map(e => ({ e, score: this.calcSimilarity(q, e.key + " " + e.fields.summary) }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 3)
-      .map(x => `  • ${x.e.key} → "${x.e.fields.summary}" [${x.e.fields.status.name}]`);
+      .map(x => `  • ${issueLink(this.baseUrl, x.e.key)} → "${x.e.fields.summary}" [${x.e.fields.status.name}]`);
 
     throw new Error(
       `Không tìm thấy Epic khớp với "${input}".\n` +

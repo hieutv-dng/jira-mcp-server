@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { JiraClient } from "../client.js";
 import { formatIssueForAI, formatIssueListForAI } from "../formatter.js";
+import { issueLink } from "../issue-link.js";
 import { withErrorHandler, getChainHint } from "../../shared/index.js";
 import { buildQuickDriftWarning } from "./issue-drift-warning.js";
 
@@ -142,7 +143,7 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
       return {
         content: [{
           type: "text",
-          text: `**Filter:** ${label}\n\n` + formatIssueListForAI(data.issues, data.total) + getChainHint("list_issues"),
+          text: `**Filter:** ${label}\n\n` + formatIssueListForAI(data.issues, data.total, jira.getBaseUrl()) + getChainHint("list_issues"),
         }],
       };
     })
@@ -170,7 +171,7 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
       return {
         content: [{
           type: "text",
-          text: driftWarning + formatIssueForAI(issue) + getChainHint("get_issue_detail"),
+          text: driftWarning + formatIssueForAI(issue, jira.getBaseUrl()) + getChainHint("get_issue_detail"),
         }],
       };
     })
@@ -251,7 +252,7 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
         return {
           content: [{
             type: "text",
-            text: `Các transition khả dụng cho ${issueKey}:\n${list}` + getChainHint("update_issue"),
+            text: `Các transition khả dụng cho ${issueLink(jira.getBaseUrl(), issueKey)}:\n${list}` + getChainHint("update_issue"),
           }],
         };
       }
@@ -276,7 +277,7 @@ export function registerIssueTools(server: McpServer, jira: JiraClient) {
       }
 
       // Case 3: combine flow — assignee → labels → due date → transition → comment
-      const reportLines: string[] = [`✅ Đã cập nhật thành công!`, `📌 Issue: ${issueKey}`];
+      const reportLines: string[] = [`✅ Đã cập nhật thành công!`, `📌 Issue: ${issueLink(jira.getBaseUrl(), issueKey)}`];
 
       // Step A: Assignee (assign trước để pass workflow guards của transition)
       if (assignee) {
